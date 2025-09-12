@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 import db from "./database/connection.js";
 import UserModel from "./database/models/user.model.js";
 import authRoutes from "./routes/auth.routes.js";
+import Category from "./database/models/category.model.js";
+import Product from "./database/models/product.model.js";
+import categoryRoutes from "./routes/category.routes.js";
+import productRoutes from "./routes/product.routes.js";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -13,6 +17,8 @@ class Server {
   private port: string;
   private apiPaths = {
     auth: "/api/auth",
+    categories: "/api/categories",
+    products: "/api/products",
   };
 
   constructor() {
@@ -27,6 +33,9 @@ class Server {
   private async dbConnect() {
     try {
       await UserModel.sync({ force: false });
+      await Category.sync({ force: false });
+      await Product.sync({ force: false });
+
       console.log("✅ Base de datos sincronizada y conectada.");
     } catch (error) {
       console.error("❌ Error al conectar con la base de datos:", error);
@@ -39,6 +48,8 @@ class Server {
 
   private routes() {
     this.app.use(this.apiPaths.auth, authRoutes);
+    this.app.use(this.apiPaths.categories, categoryRoutes);
+    this.app.use(this.apiPaths.products, productRoutes);
   }
 
   public listen() {
