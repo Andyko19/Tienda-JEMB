@@ -6,6 +6,7 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/product.controller.js";
+import { validateToken, isAdmin } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -13,9 +14,9 @@ const router = Router();
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
 
-// Rutas de Admin (protegeremos más adelante)
-router.post("/", createProduct);
-router.put("/:id", updateProduct);
-router.delete("/:id", deleteProduct);
+// Rutas de Admin (rutas protegidas)
+router.post("/", [validateToken, isAdmin], createProduct);
+router.put("/:id", [validateToken, isAdmin], updateProduct);
+router.delete("/:id", [validateToken, isAdmin], deleteProduct);
 
 export default router;

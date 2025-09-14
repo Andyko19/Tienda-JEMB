@@ -47,6 +47,10 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 3. Crear el nuevo usuario en la base de datos
+    console.log(
+      `[REGISTER] Contraseña hasheada para ${email}:`,
+      hashedPassword
+    );
     const newUser = await User.create({
       name,
       lastName,
@@ -76,24 +80,43 @@ export const register = async (req: Request, res: Response) => {
  * Inicia sesión para un usuario existente.
  */
 export const login = async (req: Request, res: Response) => {
+  console.log("\n--- [LOGIN] Intento de inicio de sesión recibido ---"); // Separador
   const { email, password } = req.body;
 
   try {
+    console.log(`[LOGIN] Buscando usuario con email: ${email}`);
     // 1. Verificar si el usuario existe (se usa la clase 'User' como tipo)
     const user: User | null = await User.findOne({ where: { email } });
     if (!user) {
+      console.log(
+        `[LOGIN] Resultado: Usuario con email ${email} NO ENCONTRADO.`
+      );
       return res.status(404).json({ message: "Usuario no encontrado." });
     }
 
     // 2. Añadimos una verificación de seguridad:
     // Si el usuario no tiene contraseña (ej. se registró con Google), no puede iniciar sesión localmente.
+    console.log(
+      "[LOGIN] Usuario encontrado en la BD:",
+      user.get({ plain: true })
+    );
     if (!user.password) {
+      console.log(
+        "[LOGIN] Resultado: El usuario no tiene contraseña (posiblemente login social)."
+      );
       return res.status(401).json({ message: "Credenciales incorrectas." });
     }
 
     // 3. Verificar si la contraseña es correcta
+    console.log(`[LOGIN] Comparando contraseña enviada: "${password}"`);
+    console.log(`[LOGIN] Con hash de la BD: "${user.password}"`);
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    console.log(
+      "[LOGIN] Resultado de la comparación de contraseñas:",
+      isPasswordCorrect
+    );
     if (!isPasswordCorrect) {
+      console.log("--- [LOGIN] FIN: Contraseña incorrecta ---");
       return res.status(401).json({ message: "Credenciales incorrectas." });
     }
 
@@ -102,6 +125,7 @@ export const login = async (req: Request, res: Response) => {
 
     // 4. Generar un nuevo token
     const token = generateToken(userResponse);
+    console.log("--- [LOGIN] FIN: Éxito ---");
 
     // 5. Enviar la respuesta
     res.status(200).json({
