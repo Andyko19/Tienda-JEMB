@@ -1,45 +1,8 @@
-import { DataTypes, Model } from "sequelize";
-import type { Optional } from "sequelize";
+import { DataTypes } from "sequelize";
 import db from "../connection.js";
 
-export interface UserAttributes {
-  id: string;
-  name: string;
-  lastName: string;
-  email: string;
-  password?: string | null;
-  provider: "local" | "google";
-  providerId?: string | null;
-  role: "customer" | "admin";
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-// 2. Define un nuevo tipo para los atributos de CREACIÓN.
-//    Hacemos opcionales los campos que Sequelize genera automáticamente o que tienen un valor por defecto.
-export type UserCreationAttributes = Optional<
-  UserAttributes,
-  "id" | "provider" | "role" | "createdAt" | "updatedAt"
->;
-
-// 3. Actualiza la definición de la clase para que use ambos tipos.
-class User
-  extends Model<UserAttributes, UserCreationAttributes>
-  implements UserAttributes
-{
-  public id!: string;
-  public name!: string;
-  public lastName!: string;
-  public email!: string;
-  public password!: string | null;
-  public provider!: "local" | "google";
-  public providerId!: string | null;
-  public role!: "customer" | "admin";
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-}
-
-User.init(
+const User = db.define(
+  "User",
   {
     id: {
       type: DataTypes.UUID,
@@ -82,7 +45,6 @@ User.init(
     },
   },
   {
-    sequelize: db,
     tableName: "users",
     timestamps: true,
   }
