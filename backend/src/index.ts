@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import db from "./database/connection.js";
 import UserModel from "./database/models/user.model.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -43,6 +44,7 @@ class Server {
   }
 
   private middlewares() {
+    this.app.use(cors());
     this.app.use(express.json());
   }
 
