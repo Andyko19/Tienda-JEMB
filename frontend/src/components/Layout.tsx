@@ -1,8 +1,10 @@
 import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; // Importamos el contexto
+import { useCart } from "../context/CartContext"; // Importamos el contexto
 
 export const Layout = () => {
   const { user, isAuthenticated, logout } = useAuth(); // Datos del usuario
+  const { count } = useCart();
 
   return (
     <div>
@@ -26,6 +28,25 @@ export const Layout = () => {
           <li>
             <Link to="/">Inicio</Link>
           </li>
+          <li>
+            <Link
+              to="/cart"
+              style={{ display: "flex", alignItems: "center", gap: "5px" }}
+            >
+              🛒 Carrito{" "}
+              <span
+                style={{
+                  background: "#646cff",
+                  color: "white",
+                  borderRadius: "50%",
+                  padding: "0.2rem 0.6rem",
+                  fontSize: "0.8rem",
+                }}
+              >
+                {count}
+              </span>
+            </Link>
+          </li>
 
           {/* Si está autenticado, mostramos su nombre y botón de salir */}
           {isAuthenticated ? (
@@ -33,11 +54,25 @@ export const Layout = () => {
               <li style={{ color: "#646cff", fontWeight: "bold" }}>
                 Hola, {user?.name}
               </li>
+              <li>
+                <Link to="/my-orders">Mis Compras</Link>
+              </li>
               {/* Si es admin, mostramos un enlace extra (opcional por ahora) */}
               {user?.role === "admin" && (
-                <li>
-                  <span style={{ color: "gold" }}>[Admin]</span>
-                </li>
+                <>
+                  {" "}
+                  {/* Usamos Fragmentos <>...</> para agrupar varios elementos */}
+                  <li>
+                    <Link to="/admin/categories" style={{ color: "gold" }}>
+                      Categorías
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/admin/products" style={{ color: "gold" }}>
+                      Productos
+                    </Link>
+                  </li>
+                </>
               )}
               <li>
                 <button

@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import type { Optional } from "sequelize";
 import db from "../connection.js";
-import Category from "./category.model.js"; // Importamos el modelo de categoría
+import Category from "./category.model.js";
 
 export interface ProductAttributes {
   id: string;
@@ -18,12 +18,13 @@ class Product
   extends Model<ProductAttributes, ProductCreationAttributes>
   implements ProductAttributes
 {
-  public id!: string;
-  public name!: string;
-  public description!: string;
-  public price!: number;
-  public stock!: number;
-  public categoryId!: string;
+  // USAMOS 'declare' PARA QUE SEQUELIZE FUNCIONE BIEN
+  declare id: string;
+  declare name: string;
+  declare description: string;
+  declare price: number;
+  declare stock: number;
+  declare categoryId: string;
 }
 
 Product.init(
@@ -38,11 +39,11 @@ Product.init(
       allowNull: false,
     },
     description: {
-      type: DataTypes.TEXT, // Usamos TEXT para descripciones largas
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     price: {
-      type: DataTypes.DECIMAL(10, 2), // 10 dígitos en total, 2 para decimales
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
     stock: {
@@ -54,7 +55,7 @@ Product.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: Category, // Establece la relación
+        model: Category,
         key: "id",
       },
     },
@@ -66,7 +67,9 @@ Product.init(
   }
 );
 
-// Definimos la relación formalmente
+// Definir relaciones
+// Nota: Es posible que necesites mover esto a un archivo de asociaciones central si tienes problemas de importación circular,
+// pero por ahora mantenlo así si no ha dado error de importación.
 Category.hasMany(Product, { foreignKey: "categoryId" });
 Product.belongsTo(Category, { foreignKey: "categoryId" });
 
