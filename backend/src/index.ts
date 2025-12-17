@@ -17,6 +17,7 @@ import productRoutes from "./routes/product.routes.js";
 import orderRoutes from "./routes/order.routes.js"; // <--- NUEVO
 import path from "path"; // <--- Importar path
 import { fileURLToPath } from "url"; // <--- Necesario para __dirname en módulos ES
+import fs from "fs";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -49,7 +50,7 @@ class Server {
       // Sincronizamos modelos existentes
       await UserModel.sync({ force: false });
       await Category.sync({ force: false });
-      await Product.sync({ force: false });
+      await Product.sync({ force: false }); // Usamos alter:true para actualizar esquema si es necesario
 
       // Sincronizamos los NUEVOS modelos de órdenes
       // (Es importante el orden si hay relaciones, pero force:false lo maneja bien)
@@ -65,7 +66,37 @@ class Server {
   private middlewares() {
     this.app.use(cors()); // Habilitar CORS
     this.app.use(express.json()); // Lectura de JSON
-    this.app.use("/uploads", express.static(path.resolve("uploads")));
+    const uploadsPath = path.join(process.cwd(), "uploads");
+
+    console.log("---------------------------------------------------");
+    console.log("📂 CARPETA DE IMÁGENES CONFIGURADA EN:");
+    console.log(uploadsPath);
+    console.log("---------------------------------------------------");
+
+    // Servir la carpeta estática
+    this.app.use("/uploads", express.static(uploadsPath));
+    this.app.get("/test-images", (req, res) => {
+      try {
+        // Leemos qué hay en la carpeta
+        const files = fs.readdirSync(uploadsPath);
+
+        res.json({
+          message: "Diagnóstico de imágenes",
+          rutaConfigurada: uploadsPath,
+          archivosEncontrados: files,
+          ejemploURL:
+            files.length > 0
+              ? `http://localhost:3001/uploads/${files[0]}`
+              : "No hay archivos para generar ejemplo",
+        });
+      } catch (error: any) {
+        res.status(500).json({
+          message: "Error leyendo carpeta",
+          error: error.message,
+          rutaIntentada: uploadsPath,
+        });
+      }
+    });
   }
 
   private routes() {

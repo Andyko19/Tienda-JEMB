@@ -47,7 +47,6 @@ export const HomePage = () => {
           No hay productos disponibles por el momento.
         </p>
       ) : (
-        /* GRID DE PRODUCTOS */
         <div
           style={{
             display: "grid",
@@ -68,20 +67,37 @@ export const HomePage = () => {
                 transition: "transform 0.2s",
               }}
             >
-              {/* Imagen simulada (placeholder) */}
+              {/* ZONA DE IMAGEN */}
               <div
                 style={{
-                  height: "150px",
-                  background: "#555",
+                  height: "200px",
                   marginBottom: "1rem",
                   borderRadius: "4px",
+                  overflow: "hidden",
+                  background: "#555",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#aaa",
                 }}
               >
-                Sin Imagen
+                {product.image ? (
+                  <img
+                    // Corrección para rutas de Windows (\ -> /)
+                    src={`http://localhost:3001/${product.image.replace(
+                      /\\/g,
+                      "/"
+                    )}`}
+                    alt={product.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  "Sin Imagen"
+                )}
               </div>
 
               <h3 style={{ margin: "0 0 0.5rem 0" }}>{product.name}</h3>
@@ -90,8 +106,8 @@ export const HomePage = () => {
                 style={{
                   color: "#aaa",
                   fontSize: "0.9rem",
-                  flex: 1 /* Esto empuja el precio hacia abajo */,
                   marginBottom: "1rem",
+                  flex: 1,
                 }}
               >
                 {product.description}

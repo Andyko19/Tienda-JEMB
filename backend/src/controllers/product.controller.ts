@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import Product from "../database/models/product.model.js";
 import Category from "../database/models/category.model.js";
 
-// Crear un nuevo producto (solo para Admin)
-export const createProduct = async (req: Request, res: Response) => {
+// 1. Crear producto (Con corrección req: any para la imagen)
+export const createProduct = async (req: any, res: Response) => {
   const imagePath = req.file ? req.file.path : null;
   const { name, description, price, stock, categoryId } = req.body;
 
@@ -14,47 +14,34 @@ export const createProduct = async (req: Request, res: Response) => {
   }
 
   try {
-    // Verificamos que la categoría exista
-    const category = await Category.findByPk(categoryId);
-    if (!category) {
-      return res
-        .status(404)
-        .json({ message: "La categoría especificada no existe." });
-    }
-
     const newProduct = await Product.create({
       name,
       description,
-      price: parseFloat(price), // Convertimos texto a número
-      stock: parseInt(stock), // Convertimos texto a entero
+      price: parseFloat(price),
+      stock: parseInt(stock),
       categoryId,
       image: imagePath,
     });
     res.status(201).json(newProduct);
   } catch (error) {
-    console.error("Error al crear el producto:", error);
-    res.status(500).json({ message: "Error al crear el producto." });
+    console.error("Error al crear producto:", error);
+    res.status(500).json({ message: "Error al crear producto." });
   }
 };
 
-// Obtener todos los productos (Público, con paginación y filtros)
+// 2. Obtener todos (Renombrado para coincidir con tus rutas)
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
     const products = await Product.findAll({
-      include: [
-        {
-          model: Category,
-          attributes: ["name"], // Incluimos el nombre de la categoría en la respuesta
-        },
-      ],
+      include: [{ model: Category, attributes: ["name"] }],
     });
     res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: "Error al obtener los productos." });
+    res.status(500).json({ message: "Error al obtener productos." });
   }
 };
 
-// Obtener un producto por su ID (Público)
+// 3. Obtener uno por ID
 export const getProductById = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
@@ -70,7 +57,7 @@ export const getProductById = async (req: Request, res: Response) => {
   }
 };
 
-// Actualizar un producto (solo para Admin)
+// 4. Actualizar producto
 export const updateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, description, price, stock, categoryId } = req.body;
@@ -84,17 +71,17 @@ export const updateProduct = async (req: Request, res: Response) => {
     if (updatedRows === 0) {
       return res.status(404).json({ message: "Producto no encontrado." });
     }
+
     const updatedProduct = await Product.findByPk(id);
     res.status(200).json(updatedProduct);
   } catch (error) {
-    res.status(500).json({ message: "Error al actualizar el producto." });
+    res.status(500).json({ message: "Error al actualizar producto." });
   }
 };
 
-// Eliminar un producto (solo para Admin)
+// 5. Eliminar producto
 export const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
-
   try {
     const deletedRows = await Product.destroy({ where: { id } });
     if (deletedRows === 0) {
@@ -102,6 +89,6 @@ export const deleteProduct = async (req: Request, res: Response) => {
     }
     res.status(200).json({ message: "Producto eliminado correctamente." });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar el producto." });
+    res.status(500).json({ message: "Error al eliminar producto." });
   }
 };

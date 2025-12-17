@@ -7,6 +7,7 @@ import {
   deleteProduct,
 } from "../controllers/product.controller.js";
 import { validateToken, isAdmin } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/upload.middleware.js"; // <--- 1. IMPORTANTE: Importar upload
 
 const router = Router();
 
@@ -15,7 +16,13 @@ router.get("/", getAllProducts);
 router.get("/:id", getProductById);
 
 // Rutas de Admin (rutas protegidas)
-router.post("/", [validateToken, isAdmin], createProduct);
+// 2. IMPORTANTE: Agregamos 'upload.single("image")' en la lista de middlewares
+router.post(
+  "/",
+  [validateToken, isAdmin, upload.single("image")],
+  createProduct
+);
+
 router.put("/:id", [validateToken, isAdmin], updateProduct);
 router.delete("/:id", [validateToken, isAdmin], deleteProduct);
 

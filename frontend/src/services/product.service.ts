@@ -1,26 +1,16 @@
 import api from "./api";
 
-// Definimos la estructura de un Producto (coincide con tu backend)
 export interface Product {
   id: string;
-  name: string;
-  description: string;
-  price: string; // A veces el backend envía decimales como strings
-  stock: number;
-  categoryId: string;
-  Category?: {
-    // El backend incluye esto gracias al "include"
-    name: string;
-  };
-}
-
-// Datos necesarios para crear un producto
-export interface CreateProductData {
   name: string;
   description: string;
   price: number;
   stock: number;
   categoryId: string;
+  image?: string; // <--- Nuevo campo para la ruta de la imagen
+  Category?: {
+    name: string;
+  };
 }
 
 export const productService = {
@@ -29,13 +19,13 @@ export const productService = {
     return response.data;
   },
 
-  create: async (data: CreateProductData) => {
-    const response = await api.post<Product>("/products", data);
+  // MODIFICADO: Ahora recibe FormData (el paquete que soporta archivos)
+  create: async (productData: FormData) => {
+    const response = await api.post("/products", productData);
     return response.data;
   },
 
   delete: async (id: string) => {
-    const response = await api.delete(`/products/${id}`);
-    return response.data;
+    await api.delete(`/products/${id}`);
   },
 };

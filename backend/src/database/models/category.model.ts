@@ -2,21 +2,21 @@ import { DataTypes, Model } from "sequelize";
 import type { Optional } from "sequelize";
 import db from "../connection.js";
 
-// Interfaz para los atributos de la categoría
-export interface CategoryAttributes {
+interface CategoryAttributes {
   id: string;
   name: string;
 }
 
-// Interfaz para la creación, haciendo el 'id' opcional
-export type CategoryCreationAttributes = Optional<CategoryAttributes, "id">;
+interface CategoryCreationAttributes
+  extends Optional<CategoryAttributes, "id"> {}
 
 class Category
   extends Model<CategoryAttributes, CategoryCreationAttributes>
   implements CategoryAttributes
 {
-  public id!: string;
-  public name!: string;
+  // USAMOS 'declare' PARA EVITAR EL WARNING Y ERRORES DE DATOS
+  declare id: string;
+  declare name: string;
 }
 
 Category.init(
@@ -27,15 +27,14 @@ Category.init(
       defaultValue: DataTypes.UUIDV4,
     },
     name: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
   },
   {
     sequelize: db,
     tableName: "categories",
-    timestamps: false, // Generalmente las categorías no necesitan timestamps
+    timestamps: false,
   }
 );
 
