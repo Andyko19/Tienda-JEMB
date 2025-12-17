@@ -9,10 +9,14 @@ export interface ProductAttributes {
   description: string;
   price: number;
   stock: number;
+  image: string | null;
   categoryId: string;
 }
 
-export type ProductCreationAttributes = Optional<ProductAttributes, "id">;
+export type ProductCreationAttributes = Optional<
+  ProductAttributes,
+  "id" | "image"
+>;
 
 class Product
   extends Model<ProductAttributes, ProductCreationAttributes>
@@ -24,6 +28,7 @@ class Product
   declare description: string;
   declare price: number;
   declare stock: number;
+  declare image: string | null;
   declare categoryId: string;
 }
 
@@ -50,6 +55,11 @@ Product.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    image: {
+      // <--- NUEVO CAMPO EN LA BASE DE DATOS
+      type: DataTypes.STRING,
+      allowNull: true, // Permitimos productos sin imagen por ahora
     },
     categoryId: {
       type: DataTypes.UUID,

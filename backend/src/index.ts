@@ -15,9 +15,13 @@ import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import orderRoutes from "./routes/order.routes.js"; // <--- NUEVO
+import path from "path"; // <--- Importar path
+import { fileURLToPath } from "url"; // <--- Necesario para __dirname en módulos ES
 
 // Cargar variables de entorno
 dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Clase para representar nuestro servidor
 class Server {
@@ -61,6 +65,7 @@ class Server {
   private middlewares() {
     this.app.use(cors()); // Habilitar CORS
     this.app.use(express.json()); // Lectura de JSON
+    this.app.use("/uploads", express.static(path.resolve("uploads")));
   }
 
   private routes() {

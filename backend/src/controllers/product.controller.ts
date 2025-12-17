@@ -4,6 +4,7 @@ import Category from "../database/models/category.model.js";
 
 // Crear un nuevo producto (solo para Admin)
 export const createProduct = async (req: Request, res: Response) => {
+  const imagePath = req.file ? req.file.path : null;
   const { name, description, price, stock, categoryId } = req.body;
 
   if (!name || !description || !price || !stock || !categoryId) {
@@ -24,9 +25,10 @@ export const createProduct = async (req: Request, res: Response) => {
     const newProduct = await Product.create({
       name,
       description,
-      price,
-      stock,
+      price: parseFloat(price), // Convertimos texto a número
+      stock: parseInt(stock), // Convertimos texto a entero
       categoryId,
+      image: imagePath,
     });
     res.status(201).json(newProduct);
   } catch (error) {
