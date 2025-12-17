@@ -2,9 +2,8 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: "http://localhost:3001/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // ELIMINAMOS LA LÍNEA DE HEADERS FIJOS
+  // Axios detectará automáticamente si enviamos JSON o Archivos
 });
 
 // Interceptor: Antes de cada petición, inyectamos el token

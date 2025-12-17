@@ -1,10 +1,14 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { Request } from "express";
 import Product from "../database/models/product.model.js";
 import Category from "../database/models/category.model.js";
 
-// 1. Crear producto (Con corrección req: any para la imagen)
+// 1. Crear producto
 export const createProduct = async (req: any, res: Response) => {
-  const imagePath = req.file ? req.file.path : null;
+  // CAMBIO AQUÍ: Usamos 'filename' y agregamos 'uploads/' manualmente
+  // Esto guarda "uploads/foto123.jpg" en la BD en lugar de "C:\Users\...\uploads\foto123.jpg"
+  const imagePath = req.file ? `uploads/${req.file.filename}` : null;
+
   const { name, description, price, stock, categoryId } = req.body;
 
   if (!name || !description || !price || !stock || !categoryId) {
@@ -20,7 +24,7 @@ export const createProduct = async (req: any, res: Response) => {
       price: parseFloat(price),
       stock: parseInt(stock),
       categoryId,
-      image: imagePath,
+      image: imagePath, // Ahora sí es una ruta web válida
     });
     res.status(201).json(newProduct);
   } catch (error) {
@@ -29,7 +33,7 @@ export const createProduct = async (req: any, res: Response) => {
   }
 };
 
-// 2. Obtener todos (Renombrado para coincidir con tus rutas)
+// 2. Obtener todos
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
     const products = await Product.findAll({
