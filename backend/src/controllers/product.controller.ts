@@ -2,6 +2,7 @@ import type { Response } from "express";
 import type { Request } from "express";
 import Product from "../database/models/product.model.js";
 import Category from "../database/models/category.model.js";
+import { Op } from "sequelize";
 
 // 1. Crear producto
 export const createProduct = async (req: any, res: Response) => {
@@ -33,14 +34,34 @@ export const createProduct = async (req: any, res: Response) => {
   }
 };
 
-// 2. Obtener todos
+// 2. Obtener productos (con filtros opcionales)
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
+    // Extraemos los filtros de la URL (ej: ?name=zapato&categoryId=123)
+    const { name, categoryId } = req.query;
+
+    // Creamos un objeto de condiciones vacío
+    const whereClause: any = {};
+
+    // Si el usuario escribió un nombre, buscamos coincidencias (case-insensitive)
+    if (name) {
+      whereClause.name = { [Op.iLike]: `%${name}%` };
+      // Nota: Si usas MySQL en vez de Postgres, cambia Op.iLike por Op.like
+    }
+
+    // Si el usuario seleccionó una categoría, filtramos por ID
+    if (categoryId) {
+      whereClause.categoryId = categoryId;
+    }
+
     const products = await Product.findAll({
+      where: whereClause, // <--- Aplicamos el filtro aquí
       include: [{ model: Category, attributes: ["name"] }],
     });
+
     res.status(200).json(products);
   } catch (error) {
+    console.error(error); // Es bueno ver el error en consola
     res.status(500).json({ message: "Error al obtener productos." });
   }
 };

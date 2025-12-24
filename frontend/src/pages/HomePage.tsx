@@ -1,34 +1,62 @@
 import { useEffect, useState } from "react";
-import { productService } from "../services/product.service";
 import type { Product } from "../services/product.service";
+import { productService } from "../services/product.service";
+import { categoryService } from "../services/category.service";
+import type { Category } from "../services/category.service"; // <--- Importar
 import { useCart } from "../context/CartContext";
 
 export const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // Para el select
   const [loading, setLoading] = useState(true);
+
+  // Estados para los filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   const { addToCart } = useCart();
 
   useEffect(() => {
-    loadProducts();
+    loadInitialData();
   }, []);
 
-  const loadProducts = async () => {
+  // Carga inicial: Productos y Categorías
+  const loadInitialData = async () => {
     try {
-      const data = await productService.getAll();
-      setProducts(data);
+      const [productsData, categoriesData] = await Promise.all([
+        productService.getAll(),
+        categoryService.getAll(),
+      ]);
+      setProducts(productsData);
+      setCategories(categoriesData);
     } catch (error) {
-      console.error("Error al cargar productos:", error);
+      console.error("Error cargando datos:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        Cargando catálogo...
-      </div>
-    );
+  // Función que se ejecuta cuando el usuario busca o cambia categoría
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const data = await productService.getAll({
+        name: searchTerm || undefined, // Si está vacío, enviamos undefined
+        categoryId: selectedCategory || undefined,
+      });
+      setProducts(data);
+    } catch (error) {
+      console.error("Error filtrando:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Efecto automático: Busca cada vez que cambian los filtros
+  // (Puedes quitar esto si prefieres un botón "Buscar")
+  useEffect(() => {
+    handleSearch();
+  }, [searchTerm, selectedCategory]);
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
@@ -42,9 +70,76 @@ export const HomePage = () => {
         Nuestros Productos
       </h1>
 
-      {products.length === 0 ? (
-        <p style={{ textAlign: "center" }}>
-          No hay productos disponibles por el momento.
+      {/* --- BARRA DE BÚSQUEDA Y FILTROS --- */}
+      <div
+        style={{
+          display: "flex",
+          gap: "1rem",
+          marginBottom: "2rem",
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="🔍 Buscar producto..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "0.8rem",
+            width: "300px",
+            borderRadius: "4px",
+            border: "1px solid #444",
+            background: "#2a2a2a",
+            color: "white",
+          }}
+        />
+
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          style={{
+            padding: "0.8rem",
+            borderRadius: "4px",
+            border: "1px solid #444",
+            background: "#2a2a2a",
+            color: "white",
+          }}
+        >
+          <option value="">Todas las Categorías</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+
+        {(searchTerm || selectedCategory) && (
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedCategory("");
+            }}
+            style={{
+              padding: "0.8rem",
+              cursor: "pointer",
+              background: "#d32f2f",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+            }}
+          >
+            Limpiar Filtros
+          </button>
+        )}
+      </div>
+      {/* --- FIN BARRA --- */}
+
+      {loading ? (
+        <div style={{ textAlign: "center" }}>Buscando...</div>
+      ) : products.length === 0 ? (
+        <p style={{ textAlign: "center", fontSize: "1.2rem", color: "#aaa" }}>
+          No encontramos productos que coincidan con tu búsqueda. 🕵️‍♂️
         </p>
       ) : (
         <div
@@ -54,6 +149,7 @@ export const HomePage = () => {
             gap: "2rem",
           }}
         >
+          {/* Mapeo de productos (sin cambios en la tarjeta) */}
           {products.map((product) => (
             <div
               key={product.id}
@@ -64,10 +160,8 @@ export const HomePage = () => {
                 display: "flex",
                 flexDirection: "column",
                 background: "#2a2a2a",
-                transition: "transform 0.2s",
               }}
             >
-              {/* ZONA DE IMAGEN */}
               <div
                 style={{
                   height: "200px",
@@ -83,7 +177,6 @@ export const HomePage = () => {
               >
                 {product.image ? (
                   <img
-                    // Corrección para rutas de Windows (\ -> /)
                     src={`http://localhost:3001/${product.image.replace(
                       /\\/g,
                       "/"
@@ -101,7 +194,6 @@ export const HomePage = () => {
               </div>
 
               <h3 style={{ margin: "0 0 0.5rem 0" }}>{product.name}</h3>
-
               <p
                 style={{
                   color: "#aaa",
@@ -130,11 +222,10 @@ export const HomePage = () => {
                 >
                   ${product.price}
                 </span>
-
                 <button
                   onClick={() => {
                     addToCart(product);
-                    alert("Producto agregado al carrito 🛒");
+                    alert("Agregado al carrito 🛒");
                   }}
                   style={{
                     padding: "0.5rem 1rem",

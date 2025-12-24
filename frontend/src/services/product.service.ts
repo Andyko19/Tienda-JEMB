@@ -14,8 +14,10 @@ export interface Product {
 }
 
 export const productService = {
-  getAll: async () => {
-    const response = await api.get<Product[]>("/products");
+  // Ahora aceptamos un objeto opcional de filtros
+  getAll: async (filters?: { name?: string; categoryId?: string }) => {
+    // Axios se encarga de convertir el objeto { name: 'hola' } en ?name=hola
+    const response = await api.get<Product[]>("/products", { params: filters });
     return response.data;
   },
 
