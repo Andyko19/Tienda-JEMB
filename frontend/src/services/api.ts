@@ -1,9 +1,7 @@
 import axios from "axios";
-
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const api = axios.create({
-  baseURL: "http://localhost:3001/api",
-  // ELIMINAMOS LA LÍNEA DE HEADERS FIJOS
-  // Axios detectará automáticamente si enviamos JSON o Archivos
+  baseURL: API_URL,
 });
 
 // Interceptor: Antes de cada petición, inyectamos el token

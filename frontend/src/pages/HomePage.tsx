@@ -59,7 +59,25 @@ export const HomePage = () => {
   }, [searchTerm, selectedCategory]);
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
+    <div
+      style={{
+        // 1. La imagen (ruta desde public)
+        backgroundImage: 'url("/logo.jpg")',
+        // 2. Asegura que cubra todo el espacio sin repetirse
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        // 3. Altura del banner
+        padding: "4rem 2rem",
+        marginBottom: "2rem",
+        // 4. (IMPORTANTE) Una capa oscura encima para que se lea el texto
+        boxShadow: "inset 0 0 0 2000px rgba(0, 0, 0, 0.6)",
+        color: "white",
+        textAlign: "center",
+        borderRadius: "8px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+      }}
+    >
       <h1
         style={{
           textAlign: "center",

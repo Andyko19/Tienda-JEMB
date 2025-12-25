@@ -1,19 +1,36 @@
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 
-// Carga las variables de entorno desde el archivo .env
 dotenv.config();
 
-// Creamos una nueva instancia de Sequelize con los datos de conexión
-const db = new Sequelize(
-  process.env.DB_NAME || "tienda_online", // Nombre de la DB
-  process.env.DB_USER || "postgres", // Usuario
-  process.env.DB_PASSWORD, // Contraseña
-  {
-    host: process.env.DB_HOST || "localhost", // Host
-    dialect: "postgres", // Le decimos que usaremos PostgreSQL
-    logging: false, // Para no mostrar las consultas SQL en la consola
-  }
-);
+// Definimos la conexión
+let db: Sequelize;
+
+if (process.env.DATABASE_URL) {
+  // CONFIGURACIÓN PARA PRODUCCIÓN (NUBE)
+  db = new Sequelize(process.env.DATABASE_URL, {
+    dialect: "postgres",
+    protocol: "postgres",
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, // Necesario para conexiones seguras en Render/Railway
+      },
+    },
+  });
+} else {
+  // CONFIGURACIÓN PARA LOCAL (TU PC)
+  db = new Sequelize(
+    process.env.DB_NAME || "tienda_jemb",
+    process.env.DB_USER || "postgres",
+    process.env.DB_PASS || "1234", // Tu contraseña local
+    {
+      host: process.env.DB_HOST || "localhost",
+      dialect: "postgres",
+      logging: false,
+    }
+  );
+}
 
 export default db;
