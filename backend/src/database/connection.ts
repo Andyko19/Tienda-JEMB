@@ -6,7 +6,7 @@ dotenv.config();
 let db: Sequelize;
 
 if (process.env.DATABASE_URL) {
-  // --- MODO PRODUCCIÓN (RENDER) ---
+  // --- MODO NUBE (RENDER) ---
   db = new Sequelize(process.env.DATABASE_URL, {
     dialect: "postgres",
     protocol: "postgres",
@@ -14,7 +14,7 @@ if (process.env.DATABASE_URL) {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false, // Indispensable para que Render acepte la conexión
+        rejectUnauthorized: false, // Vital para que Render funcione
       },
     },
   });
@@ -23,7 +23,7 @@ if (process.env.DATABASE_URL) {
   db = new Sequelize(
     process.env.DB_NAME || "tienda_online",
     process.env.DB_USER || "postgres",
-    process.env.DB_PASSWORD || "", // Asegúrate de que coincida con tu .env local
+    process.env.DB_PASSWORD || "",
     {
       host: process.env.DB_HOST || "localhost",
       dialect: "postgres",
