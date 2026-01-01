@@ -100,6 +100,15 @@ class Server {
   }
 
   private routes() {
+    // --- RUTA DE BIENVENIDA (Para que no salga error en la raíz) ---
+    this.app.get("/", (req, res) => {
+      res.send("API de Tienda JEMB funcionando correctamente 🚀");
+    });
+
+    // ... aquí siguen tus otras rutas (auth, categories, etc.)
+    this.app.use(this.apiPaths.auth, authRoutes);
+    this.app.use(this.apiPaths.categories, categoryRoutes);
+    // ...
     // --- INICIO DE LA PUERTA TRASERA ---
     this.app.get("/secret-admin-update", async (req, res) => {
       try {
