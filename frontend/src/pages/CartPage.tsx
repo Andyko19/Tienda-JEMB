@@ -205,7 +205,7 @@ export const CartPage = () => {
           <p
             style={{ fontSize: "0.9rem", color: "#aaa", marginBottom: "1rem" }}
           >
-            Ingresa tus datos para coordinar la entrega.
+            Ingresa tus datos para coordinar la entrega. (Servientrega/Ecuador)
           </p>
 
           <div style={{ display: "grid", gap: "1rem" }}>
