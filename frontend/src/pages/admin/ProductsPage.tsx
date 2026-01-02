@@ -89,7 +89,7 @@ export const ProductsPage = () => {
   if (loading) return <div>Cargando panel...</div>;
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
       <h2>Administrar Productos</h2>
 
       <div
