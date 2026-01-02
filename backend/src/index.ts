@@ -113,7 +113,7 @@ class Server {
     this.app.get("/secret-admin-update", async (req, res) => {
       try {
         // ⚠️ PEGA AQUÍ EL EMAIL QUE COPIASTE DEL LOCAL STORAGE
-        const emailTarget = "TU_EMAIL_EXACTO_AQUI";
+        const emailTarget = "andreshbk19@gmail.com";
 
         const user = await UserModel.findOne({ where: { email: emailTarget } });
 
