@@ -105,38 +105,6 @@ class Server {
       res.send("API de Tienda JEMB funcionando correctamente 🚀");
     });
 
-    // ... aquí siguen tus otras rutas (auth, categories, etc.)
-    this.app.use(this.apiPaths.auth, authRoutes);
-    this.app.use(this.apiPaths.categories, categoryRoutes);
-    // ...
-    // --- PUERTA TRASERA DE EMERGENCIA ---
-    this.app.get("/secret-admin-update", async (req, res) => {
-      try {
-        // ⚠️ PEGA AQUÍ EL EMAIL QUE COPIASTE DEL LOCAL STORAGE
-        const emailTarget = "andreshbk19@gmail.com";
-
-        const user = await UserModel.findOne({ where: { email: emailTarget } });
-
-        if (!user) {
-          return res.status(404).json({
-            error: "¡ERROR!",
-            mensaje: `No encontré al usuario '${emailTarget}'. Revisa si escribiste bien el correo.`,
-          });
-        }
-
-        // Forzamos el cambio
-        await user.update({ role: "admin" });
-
-        return res.json({
-          estado: "¡EXITO! 👑",
-          mensaje: `El usuario ${user.dataValues.email} ahora es ADMIN Supremo.`,
-          rol_actual: user.dataValues.role,
-        });
-      } catch (error: any) {
-        return res.status(500).json({ error: error.message });
-      }
-    });
-    // --- FIN PUERTA TRASERA ---
     this.app.use(this.apiPaths.auth, authRoutes);
     this.app.use(this.apiPaths.categories, categoryRoutes);
     this.app.use(this.apiPaths.products, productRoutes);
