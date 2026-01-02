@@ -5,6 +5,8 @@ import type { Category } from "../../services/category.service";
 import { categoryService } from "../../services/category.service";
 
 export const ProductsPage = () => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+  const BASE_URL = API_URL.replace("/api", "");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,10 +226,7 @@ export const ProductsPage = () => {
           >
             {product.image ? (
               <img
-                src={`http://localhost:3001/${product.image.replace(
-                  /\\/g,
-                  "/"
-                )}`}
+                src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
                 alt={product.name}
                 style={{
                   width: "100%",

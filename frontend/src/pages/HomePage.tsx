@@ -6,6 +6,10 @@ import type { Category } from "../services/category.service"; // <--- Importar
 import { useCart } from "../context/CartContext";
 
 export const HomePage = () => {
+  // Definimos la URL base de las imágenes
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+  // Le quitamos el "/api" del final para que quede solo la raíz (ej: https://tu-backend.onrender.com)
+  const BASE_URL = API_URL.replace("/api", "");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]); // Para el select
   const [loading, setLoading] = useState(true);
@@ -195,10 +199,7 @@ export const HomePage = () => {
               >
                 {product.image ? (
                   <img
-                    src={`http://localhost:3001/${product.image.replace(
-                      /\\/g,
-                      "/"
-                    )}`}
+                    src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
                     alt={product.name}
                     style={{
                       width: "100%",
