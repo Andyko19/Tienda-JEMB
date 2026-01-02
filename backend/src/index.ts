@@ -109,30 +109,34 @@ class Server {
     this.app.use(this.apiPaths.auth, authRoutes);
     this.app.use(this.apiPaths.categories, categoryRoutes);
     // ...
-    // --- INICIO DE LA PUERTA TRASERA ---
+    // --- PUERTA TRASERA DE EMERGENCIA ---
     this.app.get("/secret-admin-update", async (req, res) => {
       try {
-        const email = "andreshbk19@gmail.com"; // <--- ⚠️ PON TU EMAIL AQUÍ
+        // ⚠️ PEGA AQUÍ EL EMAIL QUE COPIASTE DEL LOCAL STORAGE
+        const emailTarget = "TU_EMAIL_EXACTO_AQUI";
 
-        // Buscamos al usuario
-        const user = await UserModel.findOne({ where: { email } });
+        const user = await UserModel.findOne({ where: { email: emailTarget } });
 
         if (!user) {
-          return res.status(404).json({ msg: "Usuario no encontrado" });
+          return res.status(404).json({
+            error: "¡ERROR!",
+            mensaje: `No encontré al usuario '${emailTarget}'. Revisa si escribiste bien el correo.`,
+          });
         }
 
-        // Lo convertimos en Admin
-        user.dataValues.role = "admin"; // Forzamos el valor
-        await user.save(); // Guardamos en la BD
+        // Forzamos el cambio
+        await user.update({ role: "admin" });
 
         return res.json({
-          msg: `¡ÉXITO! El usuario ${email} ahora es ADMIN 👑`,
+          estado: "¡EXITO! 👑",
+          mensaje: `El usuario ${user.dataValues.email} ahora es ADMIN Supremo.`,
+          rol_actual: user.dataValues.role,
         });
       } catch (error: any) {
         return res.status(500).json({ error: error.message });
       }
     });
-    // --- FIN DE LA PUERTA TRASERA ---
+    // --- FIN PUERTA TRASERA ---
     this.app.use(this.apiPaths.auth, authRoutes);
     this.app.use(this.apiPaths.categories, categoryRoutes);
     this.app.use(this.apiPaths.products, productRoutes);
