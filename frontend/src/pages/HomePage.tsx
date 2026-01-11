@@ -2,16 +2,13 @@ import { useEffect, useState } from "react";
 import type { Product } from "../services/product.service";
 import { productService } from "../services/product.service";
 import { categoryService } from "../services/category.service";
-import type { Category } from "../services/category.service"; // <--- Importar
+import type { Category } from "../services/category.service";
 import { useCart } from "../context/CartContext";
+// Ya no necesitamos react-player
 
 export const HomePage = () => {
-  // Definimos la URL base de las imágenes
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-  // Le quitamos el "/api" del final para que quede solo la raíz (ej: https://tu-backend.onrender.com)
-  const BASE_URL = API_URL.replace("/api", "");
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]); // Para el select
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Estados para los filtros
@@ -20,11 +17,14 @@ export const HomePage = () => {
 
   const { addToCart } = useCart();
 
+  // URL base para las imágenes
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+  const BASE_URL = API_URL.replace("/api", "");
+
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Carga inicial: Productos y Categorías
   const loadInitialData = async () => {
     try {
       const [productsData, categoriesData] = await Promise.all([
@@ -40,12 +40,11 @@ export const HomePage = () => {
     }
   };
 
-  // Función que se ejecuta cuando el usuario busca o cambia categoría
   const handleSearch = async () => {
     setLoading(true);
     try {
       const data = await productService.getAll({
-        name: searchTerm || undefined, // Si está vacío, enviamos undefined
+        name: searchTerm || undefined,
         categoryId: selectedCategory || undefined,
       });
       setProducts(data);
@@ -56,24 +55,80 @@ export const HomePage = () => {
     }
   };
 
-  // Efecto automático: Busca cada vez que cambian los filtros
-  // (Puedes quitar esto si prefieres un botón "Buscar")
   useEffect(() => {
     handleSearch();
   }, [searchTerm, selectedCategory]);
 
+  // --- COMPONENTE AUXILIAR PARA VIDEO (NATIVO) ---
+  const renderMedia = (product: Product) => {
+    // 1. Si hay VIDEO
+    if (product.video) {
+      // A) Es YouTube?
+      if (
+        product.video.includes("youtube.com") ||
+        product.video.includes("youtu.be")
+      ) {
+        // Lógica para sacar el ID del video
+        let videoId = "";
+        try {
+          if (product.video.includes("v=")) {
+            videoId = product.video.split("v=")[1].split("&")[0];
+          } else if (product.video.includes("youtu.be")) {
+            videoId = product.video.split("/").pop() || "";
+          }
+        } catch (e) {
+          console.error("Error parseando URL de youtube", e);
+        }
+
+        return (
+          <iframe
+            width="100%"
+            height="100%"
+            src={`https://www.youtube.com/embed/${videoId}`}
+            title={product.name}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ borderRadius: "4px" }}
+          ></iframe>
+        );
+      }
+
+      // B) Es un archivo directo (.mp4, etc)
+      return (
+        <video
+          src={product.video}
+          controls
+          width="100%"
+          height="100%"
+          style={{ backgroundColor: "#000", borderRadius: "4px" }}
+        />
+      );
+    }
+
+    // 2. Si NO hay video, mostrar FOTO
+    if (product.image) {
+      return (
+        <img
+          src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
+          alt={product.name}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      );
+    }
+
+    // 3. Nada
+    return <span style={{ color: "#aaa" }}>Sin Imagen</span>;
+  };
+
   return (
     <div
       style={{
-        // 1. La imagen (ruta desde public)
         backgroundImage: 'url("/logo.jpg")',
-        // 2. Asegura que cubra todo el espacio sin repetirse
         backgroundSize: "cover",
         backgroundPosition: "center",
-        // 3. Altura del banner
         padding: "4rem 2rem",
         marginBottom: "2rem",
-        // 4. (IMPORTANTE) Una capa oscura encima para que se lea el texto
         boxShadow: "inset 0 0 0 2000px rgba(0, 0, 0, 0.6)",
         color: "white",
         textAlign: "center",
@@ -92,7 +147,7 @@ export const HomePage = () => {
         Nuestros Productos
       </h1>
 
-      {/* --- BARRA DE BÚSQUEDA Y FILTROS --- */}
+      {/* --- FILTROS --- */}
       <div
         style={{
           display: "flex",
@@ -116,7 +171,6 @@ export const HomePage = () => {
             color: "white",
           }}
         />
-
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
@@ -135,7 +189,6 @@ export const HomePage = () => {
             </option>
           ))}
         </select>
-
         {(searchTerm || selectedCategory) && (
           <button
             onClick={() => {
@@ -151,115 +204,127 @@ export const HomePage = () => {
               borderRadius: "4px",
             }}
           >
-            Limpiar Filtros
+            Limpiar
           </button>
         )}
       </div>
-      {/* --- FIN BARRA --- */}
 
+      {/* --- GRID DE PRODUCTOS --- */}
       {loading ? (
-        <div style={{ textAlign: "center" }}>Buscando...</div>
+        <div>Buscando...</div>
       ) : products.length === 0 ? (
-        <p style={{ textAlign: "center", fontSize: "1.2rem", color: "#aaa" }}>
-          No encontramos productos que coincidan con tu búsqueda. 🕵️‍♂️
-        </p>
+        <p style={{ color: "#aaa" }}>No hay productos.</p>
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
             gap: "2rem",
           }}
         >
-          {/* Mapeo de productos (sin cambios en la tarjeta) */}
-          {products.map((product) => (
-            <div
-              key={product.id}
-              style={{
-                border: "1px solid #444",
-                borderRadius: "8px",
-                padding: "1rem",
-                display: "flex",
-                flexDirection: "column",
-                background: "#2a2a2a",
-              }}
-            >
-              <div
-                style={{
-                  height: "200px",
-                  marginBottom: "1rem",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  background: "#555",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#aaa",
-                }}
-              >
-                {product.image ? (
-                  <img
-                    src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
-                    alt={product.name}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  "Sin Imagen"
-                )}
-              </div>
+          {products.map((product) => {
+            const hasStock = product.stock > 0;
 
-              <h3 style={{ margin: "0 0 0.5rem 0" }}>{product.name}</h3>
-              <p
-                style={{
-                  color: "#aaa",
-                  fontSize: "0.9rem",
-                  marginBottom: "1rem",
-                  flex: 1,
-                }}
-              >
-                {product.description}
-              </p>
-
+            return (
               <div
+                key={product.id}
                 style={{
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                  padding: "1rem",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: "auto",
+                  flexDirection: "column",
+                  background: "#2a2a2a",
+                  position: "relative",
+                  opacity: hasStock ? 1 : 0.7,
                 }}
               >
-                <span
+                {/* ETIQUETA STOCK */}
+                <div
                   style={{
-                    fontSize: "1.2rem",
-                    fontWeight: "bold",
-                    color: "#4caf50",
-                  }}
-                >
-                  ${product.price}
-                </span>
-                <button
-                  onClick={() => {
-                    addToCart(product);
-                    alert("Agregado al carrito 🛒");
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#646cff",
-                    border: "none",
-                    borderRadius: "4px",
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    background: hasStock ? "#2ecc71" : "#e74c3c",
                     color: "white",
-                    cursor: "pointer",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    zIndex: 10,
                   }}
                 >
-                  Añadir
-                </button>
+                  {hasStock ? `Stock: ${product.stock}` : "AGOTADO"}
+                </div>
+
+                {/* --- ZONA MULTIMEDIA (VIDEO O FOTO) --- */}
+                <div
+                  style={{
+                    height: "200px",
+                    marginBottom: "1rem",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    background: "#000",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid #444",
+                  }}
+                >
+                  {/* LLAMAMOS A LA FUNCIÓN QUE ELIGE QUÉ MOSTRAR */}
+                  {renderMedia(product)}
+                </div>
+
+                <h3 style={{ margin: "0 0 0.5rem 0" }}>{product.name}</h3>
+                <p
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "1rem",
+                    flex: 1,
+                  }}
+                >
+                  {product.description}
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "auto",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "1.2rem",
+                      fontWeight: "bold",
+                      color: "#4caf50",
+                    }}
+                  >
+                    ${product.price}
+                  </span>
+                  <button
+                    onClick={() => {
+                      addToCart(product);
+                      alert("Agregado al carrito 🛒");
+                    }}
+                    disabled={!hasStock}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      background: hasStock ? "#646cff" : "#555",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: "white",
+                      cursor: hasStock ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {hasStock ? "Añadir" : "Sin Stock"}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -23,7 +23,11 @@ router.post(
   createProduct
 );
 
-router.put("/:id", [validateToken, isAdmin], updateProduct);
+router.put(
+  "/:id",
+  [validateToken, isAdmin, upload.single("image")],
+  updateProduct
+);
 router.delete("/:id", [validateToken, isAdmin], deleteProduct);
 
 export default router;

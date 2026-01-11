@@ -1,24 +1,25 @@
 import { useEffect, useState } from "react";
 import type { Product } from "../../services/product.service";
 import { productService } from "../../services/product.service";
-import type { Category } from "../../services/category.service";
 import { categoryService } from "../../services/category.service";
+import type { Category } from "../../services/category.service";
+
+// Definimos las constantes de URL igual que hicimos antes
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const BASE_URL = API_URL.replace("/api", "");
 
 export const ProductsPage = () => {
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-  const BASE_URL = API_URL.replace("/api", "");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Estados del formulario
+  const [editingId, setEditingId] = useState<string | null>(null); // ¿Estamos editando?
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState("");
-
-  // Estado para guardar el archivo seleccionado
+  const [video, setVideo] = useState(""); // <--- NUEVO CAMPO VIDEO
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -26,27 +27,31 @@ export const ProductsPage = () => {
   }, []);
 
   const loadData = async () => {
-    try {
-      const [productsData, categoriesData] = await Promise.all([
-        productService.getAll(),
-        categoryService.getAll(),
-      ]);
-      setProducts(productsData);
-      setCategories(categoriesData);
-      if (categoriesData.length > 0 && !categoryId)
-        setCategoryId(categoriesData[0].id);
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-    } finally {
-      setLoading(false);
-    }
+    const [prods, cats] = await Promise.all([
+      productService.getAll(),
+      categoryService.getAll(),
+    ]);
+    setProducts(prods);
+    setCategories(cats);
+    if (cats.length > 0 && !categoryId) setCategoryId(cats[0].id);
+  };
+
+  // Función para cargar los datos en el formulario al dar clic en "Editar"
+  const handleEdit = (product: Product) => {
+    setEditingId(product.id);
+    setName(product.name);
+    setDescription(product.description);
+    setPrice(product.price.toString());
+    setStock(product.stock.toString());
+    setCategoryId(product.categoryId);
+    setVideo(product.video || ""); // Cargar video si existe
+    setSelectedFile(null); // Reseteamos la imagen seleccionada
+    // Scroll hacia arriba para ver el form
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !price || !categoryId)
-      return alert("Completa los campos obligatorios");
-
     try {
       const formData = new FormData();
       formData.append("name", name);
@@ -54,158 +59,157 @@ export const ProductsPage = () => {
       formData.append("price", price);
       formData.append("stock", stock);
       formData.append("categoryId", categoryId);
+      formData.append("video", video); // <--- ENVIAMOS EL VIDEO
 
       if (selectedFile) {
         formData.append("image", selectedFile);
       }
 
-      await productService.create(formData);
+      if (editingId) {
+        // MODO EDICIÓN
+        await productService.update(editingId, formData);
+        alert("Producto actualizado correctamente ✅");
+      } else {
+        // MODO CREACIÓN
+        await productService.create(formData);
+        alert("Producto creado con éxito ✅");
+      }
 
-      // Limpieza
+      // Limpiar formulario
+      setEditingId(null);
       setName("");
       setDescription("");
       setPrice("");
       setStock("");
+      setVideo("");
       setSelectedFile(null);
-      // Resetear el input de archivo visualmente
-      const fileInput = document.getElementById(
-        "fileInput"
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-
-      alert("Producto creado con éxito ✅");
       loadData();
     } catch (error) {
       console.error(error);
-      alert("Error al crear producto");
+      alert("Error al guardar");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de eliminar este producto?")) {
+    if (confirm("¿Borrar producto?")) {
       await productService.delete(id);
       loadData();
     }
   };
 
-  if (loading) return <div>Cargando panel...</div>;
-
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
-      <h2>Administrar Productos</h2>
+      <h2>{editingId ? "✏️ Editando Producto" : "➕ Crear Nuevo Producto"}</h2>
 
-      <div
+      <form
+        onSubmit={handleSubmit}
         style={{
-          background: "#2a2a2a",
+          background: "#222",
           padding: "1.5rem",
           borderRadius: "8px",
           marginBottom: "2rem",
+          display: "grid",
+          gap: "1rem",
         }}
       >
-        <h3>Crear Nuevo Producto</h3>
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "grid", gap: "1rem", maxWidth: "500px" }}
-        >
-          {/* CAMBIO: Agregamos name e id a los inputs */}
+        <input
+          placeholder="Nombre"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          style={{ padding: "8px" }}
+        />
+        <textarea
+          placeholder="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          style={{ padding: "8px" }}
+        />
+
+        <div style={{ display: "flex", gap: "1rem" }}>
           <input
-            name="name"
-            id="name"
-            placeholder="Nombre del producto"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ padding: "0.5rem" }}
+            type="number"
+            placeholder="Precio ($)"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             required
+            style={{ flex: 1, padding: "8px" }}
           />
-          <textarea
-            name="description"
-            id="description"
-            placeholder="Descripción"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            style={{ padding: "0.5rem" }}
+          <input
+            type="number"
+            placeholder="Stock (Unidades)"
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+            required
+            style={{ flex: 1, padding: "8px" }}
           />
-          <div style={{ display: "flex", gap: "1rem" }}>
-            <input
-              name="price"
-              id="price"
-              type="number"
-              placeholder="Precio"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              style={{ padding: "0.5rem", flex: 1 }}
-              required
-            />
-            <input
-              name="stock"
-              id="stock"
-              type="number"
-              placeholder="Stock"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-              style={{ padding: "0.5rem", flex: 1 }}
-              required
-            />
-          </div>
+        </div>
 
-          <select
-            name="category"
-            id="category"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            style={{ padding: "0.5rem" }}
-          >
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+        {/* INPUT DE VIDEO */}
+        <input
+          placeholder="Link de Video (YouTube, Vimeo, etc...)"
+          value={video}
+          onChange={(e) => setVideo(e.target.value)}
+          style={{
+            padding: "8px",
+            border: "1px solid #555",
+            background: "#333",
+            color: "white",
+          }}
+        />
 
-          <div
-            style={{
-              border: "1px dashed #666",
-              padding: "1rem",
-              borderRadius: "4px",
-            }}
-          >
-            <label
-              htmlFor="fileInput"
-              style={{
-                display: "block",
-                marginBottom: "0.5rem",
-                color: "#aaa",
-              }}
-            >
-              Imagen:
-            </label>
-            <input
-              name="image"
-              id="fileInput"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setSelectedFile(e.target.files[0]);
-                }
-              }}
-            />
-          </div>
+        <select
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          style={{ padding: "8px" }}
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
 
+        <input
+          type="file"
+          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+        />
+
+        <div style={{ display: "flex", gap: "10px" }}>
           <button
             type="submit"
             style={{
-              padding: "0.8rem",
-              background: "#646cff",
+              flex: 1,
+              padding: "10px",
+              background: editingId ? "#f39c12" : "#27ae60",
               color: "white",
               border: "none",
               cursor: "pointer",
             }}
           >
-            Guardar Producto
+            {editingId ? "Guardar Cambios" : "Crear Producto"}
           </button>
-        </form>
-      </div>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setName("");
+                setDescription("");
+              }}
+              style={{
+                padding: "10px",
+                background: "#7f8c8d",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+      </form>
 
       <h3>Lista de Productos</h3>
       <div
@@ -215,57 +219,66 @@ export const ProductsPage = () => {
           gap: "1rem",
         }}
       >
-        {products.map((product) => (
+        {products.map((p) => (
           <div
-            key={product.id}
+            key={p.id}
             style={{
               border: "1px solid #444",
               padding: "1rem",
               borderRadius: "8px",
+              background: "#1a1a1a",
             }}
           >
-            {product.image ? (
+            {p.image && (
               <img
-                src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
-                alt={product.name}
+                src={`${BASE_URL}/${p.image.replace(/\\/g, "/")}`}
+                alt={p.name}
                 style={{
                   width: "100%",
-                  height: "150px",
+                  height: "100px",
                   objectFit: "cover",
                   borderRadius: "4px",
-                  marginBottom: "0.5rem",
+                  marginBottom: "10px",
                 }}
               />
-            ) : (
-              <div
-                style={{
-                  height: "150px",
-                  background: "#555",
-                  marginBottom: "0.5rem",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                Sin Foto
-              </div>
             )}
-
-            <h4 style={{ margin: "0 0 0.5rem 0" }}>{product.name}</h4>
-            <p style={{ margin: 0, color: "#aaa" }}>${product.price}</p>
-            <button
-              onClick={() => handleDelete(product.id)}
+            <h4 style={{ margin: "0 0 5px 0" }}>{p.name}</h4>
+            <p
               style={{
-                marginTop: "0.5rem",
-                background: "#d32f2f",
-                color: "white",
-                border: "none",
-                padding: "0.3rem 0.5rem",
-                cursor: "pointer",
+                color: p.stock > 0 ? "#2ecc71" : "#e74c3c",
+                fontWeight: "bold",
               }}
             >
-              Eliminar
-            </button>
+              Stock: {p.stock}
+            </p>
+            <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
+              <button
+                onClick={() => handleEdit(p)}
+                style={{
+                  flex: 1,
+                  background: "#3498db",
+                  border: "none",
+                  color: "white",
+                  padding: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDelete(p.id)}
+                style={{
+                  flex: 1,
+                  background: "#c0392b",
+                  border: "none",
+                  color: "white",
+                  padding: "5px",
+                  cursor: "pointer",
+                }}
+              >
+                Borrar
+              </button>
+            </div>
           </div>
         ))}
       </div>

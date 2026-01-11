@@ -8,6 +8,7 @@ export interface Product {
   stock: number;
   categoryId: string;
   image?: string; // <--- Nuevo campo para la ruta de la imagen
+  video?: string; // <--- Nuevo campo para la URL del video
   Category?: {
     name: string;
   };
@@ -29,5 +30,11 @@ export const productService = {
 
   delete: async (id: string) => {
     await api.delete(`/products/${id}`);
+  },
+  update: async (id: string, productData: FormData | any) => {
+    // Si es FormData (con imagen), el navegador pone el header correcto.
+    // Si es JSON simple, axios lo detecta.
+    const response = await api.put(`/products/${id}`, productData);
+    return response.data;
   },
 };

@@ -11,11 +11,12 @@ export interface ProductAttributes {
   stock: number;
   image: string | null;
   categoryId: string;
+  video: string | null;
 }
 
 export type ProductCreationAttributes = Optional<
   ProductAttributes,
-  "id" | "image"
+  "id" | "image" | "video"
 >;
 
 class Product
@@ -30,6 +31,7 @@ class Product
   declare stock: number;
   declare image: string | null;
   declare categoryId: string;
+  declare video: string | null;
 }
 
 Product.init(
@@ -60,6 +62,10 @@ Product.init(
       // <--- NUEVO CAMPO EN LA BASE DE DATOS
       type: DataTypes.STRING,
       allowNull: true, // Permitimos productos sin imagen por ahora
+    },
+    video: {
+      type: DataTypes.STRING,
+      allowNull: true, // Puede estar vacío si no hay video
     },
     categoryId: {
       type: DataTypes.UUID,

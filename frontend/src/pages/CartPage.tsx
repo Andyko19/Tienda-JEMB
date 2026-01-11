@@ -74,8 +74,8 @@ export const CartPage = () => {
     if (!orderId) return;
 
     // --- CONSTRUCCIÓN DEL MENSAJE DE WHATSAPP ---
-    let message = `Hola! 👋 Acabo de pagar el pedido *#${orderId}*.\n`;
-    message += `Adjunto mi comprobante de pago 📄.\n\n`;
+    let message = `Hola! 👋 Este es el pedido, *#${orderId}*.\n`;
+    message += `En un momento adjunto mi comprobante de pago 📄.\n\n`;
 
     // Datos de Envío
     message += `📦 *DATOS DE ENVÍO:*\n`;
@@ -385,7 +385,7 @@ export const CartPage = () => {
                 marginBottom: "1rem",
               }}
             >
-              ✅ Ya pagué, Enviar Pedido
+              ✅ Enviar Pedido y proceder a pagar
             </button>
 
             <button

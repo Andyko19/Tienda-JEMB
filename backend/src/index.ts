@@ -50,7 +50,7 @@ class Server {
       // Sincronizamos modelos existentes
       await UserModel.sync({ force: false });
       await Category.sync({ force: false });
-      await Product.sync({ force: false }); // Usamos alter:true para actualizar esquema si es necesario
+      await Product.sync({ alter: true }); // Usamos alter:true para actualizar esquema si es necesario
 
       // Sincronizamos los NUEVOS modelos de órdenes
       // (Es importante el orden si hay relaciones, pero force:false lo maneja bien)

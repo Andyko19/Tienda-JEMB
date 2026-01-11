@@ -10,7 +10,7 @@ export const createProduct = async (req: any, res: Response) => {
   // Esto guarda "uploads/foto123.jpg" en la BD en lugar de "C:\Users\...\uploads\foto123.jpg"
   const imagePath = req.file ? `uploads/${req.file.filename}` : null;
 
-  const { name, description, price, stock, categoryId } = req.body;
+  const { name, description, price, stock, categoryId, video } = req.body;
 
   if (!name || !description || !price || !stock || !categoryId) {
     return res
@@ -25,6 +25,7 @@ export const createProduct = async (req: any, res: Response) => {
       price: parseFloat(price),
       stock: parseInt(stock),
       categoryId,
+      video,
       image: imagePath, // Ahora sí es una ruta web válida
     });
     res.status(201).json(newProduct);
@@ -83,23 +84,38 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 
 // 4. Actualizar producto
-export const updateProduct = async (req: Request, res: Response) => {
+export const updateProduct = async (req: any, res: Response) => {
   const { id } = req.params;
-  const { name, description, price, stock, categoryId } = req.body;
+  // Ahora recibimos 'video' y los demás datos del FormData
+  const { name, description, price, stock, categoryId, video } = req.body;
 
   try {
-    const [updatedRows] = await Product.update(
-      { name, description, price, stock, categoryId },
-      { where: { id } }
-    );
-
-    if (updatedRows === 0) {
+    const product = await Product.findByPk(id);
+    if (!product) {
       return res.status(404).json({ message: "Producto no encontrado." });
     }
 
-    const updatedProduct = await Product.findByPk(id);
-    res.status(200).json(updatedProduct);
+    // Lógica inteligente para la imagen:
+    // Si subieron una nueva (req.file existe), usamos esa ruta.
+    // Si NO subieron nueva, mantenemos la que ya tenía (product.image).
+    const imagePath = req.file
+      ? `uploads/${req.file.filename}`
+      : product.dataValues.image;
+
+    // Actualizamos los campos
+    await product.update({
+      name,
+      description,
+      price: parseFloat(price),
+      stock: parseInt(stock),
+      categoryId,
+      image: imagePath,
+      video: video || null, // Si envían vacío, guardamos null
+    });
+
+    res.status(200).json(product);
   } catch (error) {
+    console.error("Error al actualizar:", error);
     res.status(500).json({ message: "Error al actualizar producto." });
   }
 };
