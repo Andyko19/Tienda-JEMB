@@ -4,7 +4,6 @@ import { productService } from "../../services/product.service";
 import type { Category } from "../../services/category.service";
 import { categoryService } from "../../services/category.service";
 
-// URL base para previsualizar imágenes/videos locales
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const BASE_URL = API_URL.replace("/api", "");
 
@@ -12,7 +11,7 @@ export const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Estados del formulario
+  // Estados formulario
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -20,10 +19,9 @@ export const ProductsPage = () => {
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState("");
 
-  // --- ARCHIVOS MULTIMEDIA ---
+  // Multimedia
   const [imageUrl, setImageUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
@@ -53,13 +51,11 @@ export const ProductsPage = () => {
     setStock(product.stock.toString());
     setCategoryId(product.categoryId);
 
-    // Cargar Imagen
     if (product.image && product.image.startsWith("http"))
       setImageUrl(product.image);
     else setImageUrl("");
     setSelectedFile(null);
 
-    // Cargar Video
     if (product.video && product.video.startsWith("http"))
       setVideoUrl(product.video);
     else setVideoUrl("");
@@ -78,23 +74,20 @@ export const ProductsPage = () => {
       formData.append("stock", stock);
       formData.append("categoryId", categoryId);
 
-      // IMAGEN
       if (selectedFile) formData.append("image", selectedFile);
       else if (imageUrl) formData.append("image", imageUrl);
 
-      // VIDEO
       if (selectedVideoFile) formData.append("video", selectedVideoFile);
       else if (videoUrl) formData.append("video", videoUrl);
 
       if (editingId) {
         await productService.update(editingId, formData);
-        alert("¡Producto actualizado! ✅");
+        alert("¡Actualizado! ✅");
       } else {
         await productService.create(formData);
-        alert("¡Producto creado! ✅");
+        alert("¡Creado! ✅");
       }
 
-      // Reset
       setEditingId(null);
       setName("");
       setDescription("");
@@ -113,20 +106,31 @@ export const ProductsPage = () => {
       loadData();
     } catch (error) {
       console.error(error);
-      alert("Error al guardar. Si es un video pesado, espera un poco más.");
+      alert("Error al guardar.");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Borrar producto?")) {
+    if (confirm("¿Borrar?")) {
       await productService.delete(id);
       loadData();
     }
   };
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
-      <h2>{editingId ? "✏️ Editar Producto" : "➕ Crear Nuevo Producto"}</h2>
+    // CAMBIO 1: Ancho al 100% y padding adaptable
+    <div
+      style={{
+        maxWidth: "800px",
+        width: "100%",
+        margin: "0 auto",
+        padding: "1rem",
+        boxSizing: "border-box",
+      }}
+    >
+      <h2 style={{ textAlign: "center" }}>
+        {editingId ? "✏️ Editar" : "➕ Nuevo Producto"}
+      </h2>
 
       <form
         onSubmit={handleSubmit}
@@ -144,23 +148,29 @@ export const ProductsPage = () => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          style={{ padding: "10px" }}
+          style={{ padding: "10px", width: "100%", boxSizing: "border-box" }}
         />
         <textarea
           placeholder="Descripción"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{ padding: "10px", minHeight: "80px" }}
+          style={{
+            padding: "10px",
+            minHeight: "80px",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
         />
 
-        <div style={{ display: "flex", gap: "1rem" }}>
+        {/* CAMBIO 2: flex-wrap para que Precio y Stock bajen en celular */}
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
           <input
             type="number"
             placeholder="Precio ($)"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             required
-            style={{ flex: 1, padding: "10px" }}
+            style={{ flex: 1, minWidth: "120px", padding: "10px" }}
           />
           <input
             type="number"
@@ -168,14 +178,14 @@ export const ProductsPage = () => {
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             required
-            style={{ flex: 1, padding: "10px" }}
+            style={{ flex: 1, minWidth: "120px", padding: "10px" }}
           />
         </div>
 
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          style={{ padding: "10px" }}
+          style={{ padding: "10px", width: "100%" }}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -184,7 +194,7 @@ export const ProductsPage = () => {
           ))}
         </select>
 
-        {/* SECCIÓN VIDEO */}
+        {/* Video */}
         <div
           style={{
             border: "1px dashed #666",
@@ -196,9 +206,8 @@ export const ProductsPage = () => {
           <p style={{ marginTop: 0, color: "#4caf50", fontWeight: "bold" }}>
             🎥 Video:
           </p>
-
           <input
-            placeholder="Link (YouTube, Facebook) o déjalo vacío"
+            placeholder="Link (YouTube, FB) o vacío"
             value={videoUrl}
             onChange={(e) => {
               setVideoUrl(e.target.value);
@@ -211,6 +220,7 @@ export const ProductsPage = () => {
               background: "#444",
               color: "white",
               border: "1px solid #555",
+              boxSizing: "border-box",
             }}
           />
           <div
@@ -221,7 +231,7 @@ export const ProductsPage = () => {
               marginBottom: "5px",
             }}
           >
-            - O SUBIR ARCHIVO MP4 (Recomendado para TikTok) -
+            - O SUBIR ARCHIVO -
           </div>
           <input
             id="videoInput"
@@ -233,11 +243,11 @@ export const ProductsPage = () => {
                 setVideoUrl("");
               }
             }}
-            style={{ color: "white" }}
+            style={{ color: "white", maxWidth: "100%" }} // maxWidth evita desborde
           />
         </div>
 
-        {/* SECCIÓN IMAGEN */}
+        {/* Imagen */}
         <div
           style={{
             border: "1px dashed #666",
@@ -250,7 +260,7 @@ export const ProductsPage = () => {
             🖼️ Imagen:
           </p>
           <input
-            placeholder="Link de imagen (http...)"
+            placeholder="Link imagen"
             value={imageUrl}
             onChange={(e) => {
               setImageUrl(e.target.value);
@@ -263,6 +273,7 @@ export const ProductsPage = () => {
               background: "#444",
               color: "white",
               border: "1px solid #555",
+              boxSizing: "border-box",
             }}
           />
           <div
@@ -285,7 +296,7 @@ export const ProductsPage = () => {
                 setImageUrl("");
               }
             }}
-            style={{ color: "white" }}
+            style={{ color: "white", maxWidth: "100%" }}
           />
         </div>
 
@@ -309,7 +320,7 @@ export const ProductsPage = () => {
             <button
               type="button"
               onClick={() => setEditingId(null)}
-              style={{ padding: "12px" }}
+              style={{ padding: "12px", borderRadius: "4px", border: "none" }}
             >
               Cancelar
             </button>
@@ -317,11 +328,11 @@ export const ProductsPage = () => {
         </div>
       </form>
 
-      {/* LISTA DE PRODUCTOS (Ahora con FOTO y VIDEO mini) */}
+      {/* CAMBIO 3: Grid responsive con minmax más pequeño (150px) para que quepan 2 en móviles */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
           gap: "1rem",
         }}
       >
@@ -335,7 +346,6 @@ export const ProductsPage = () => {
               background: "#1a1a1a",
             }}
           >
-            {/* MINIATURA FOTO */}
             <div
               style={{
                 height: "100px",
@@ -365,7 +375,6 @@ export const ProductsPage = () => {
               )}
             </div>
 
-            {/* INDICADOR VIDEO */}
             {p.video && (
               <div
                 style={{
@@ -378,19 +387,40 @@ export const ProductsPage = () => {
                   marginBottom: "5px",
                 }}
               >
-                🎥 TIENE VIDEO
+                🎥 VIDEO
               </div>
             )}
 
-            <h4 style={{ margin: "0 0 5px 0" }}>{p.name}</h4>
-            <div style={{ display: "flex", gap: "5px" }}>
+            <h4
+              style={{
+                margin: "0 0 5px 0",
+                fontSize: "0.9rem",
+                wordBreak: "break-word",
+              }}
+            >
+              {p.name}
+            </h4>
+            <p style={{ margin: 0, color: "#aaa", fontSize: "0.8rem" }}>
+              Stock: {p.stock}
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "5px",
+                marginTop: "10px",
+                flexDirection: "column",
+              }}
+            >
               <button
                 onClick={() => handleEdit(p)}
                 style={{
-                  flex: 1,
+                  width: "100%",
                   background: "#3498db",
                   color: "white",
                   padding: "5px",
+                  border: "none",
+                  borderRadius: "4px",
                 }}
               >
                 Editar
@@ -398,10 +428,12 @@ export const ProductsPage = () => {
               <button
                 onClick={() => handleDelete(p.id)}
                 style={{
-                  flex: 1,
+                  width: "100%",
                   background: "#c0392b",
                   color: "white",
                   padding: "5px",
+                  border: "none",
+                  borderRadius: "4px",
                 }}
               >
                 Borrar

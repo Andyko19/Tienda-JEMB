@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { categoryService } from "../../services/category.service";
 import type { Category } from "../../services/category.service";
+import { categoryService } from "../../services/category.service";
 
 export const CategoriesPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
 
-  // Cargar categorías al entrar a la página
   useEffect(() => {
     loadCategories();
   }, []);
@@ -16,94 +15,156 @@ export const CategoriesPage = () => {
     try {
       const data = await categoryService.getAll();
       setCategories(data);
-    } catch (err) {
-      console.error("Error al cargar categorías", err);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (!newCategoryName.trim()) return;
-
     try {
-      await categoryService.create(newCategoryName);
-      setNewCategoryName(""); // Limpiar input
-      loadCategories(); // Recargar la lista para ver la nueva
-      alert("Categoría creada con éxito");
-    } catch (err: any) {
-      setError("Error al crear categoría. Verifica que seas Admin.");
+      if (editingId) {
+        await categoryService.update(editingId, name);
+      } else {
+        await categoryService.create(name);
+      }
+      setEditingId(null);
+      setName("");
+      loadCategories();
+    } catch (error) {
+      console.error(error);
     }
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingId(category.id);
+    setName(category.name);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return;
-    try {
+    if (confirm("¿Borrar categoría?")) {
       await categoryService.delete(id);
       loadCategories();
-    } catch (err) {
-      alert("Error al eliminar. Puede que tenga productos asociados.");
     }
   };
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "2rem" }}>
-      <h2>Gestión de Categorías</h2>
+    // CAMBIO 1: width: "100%" para que no se salga en móvil
+    <div
+      style={{
+        maxWidth: "600px",
+        width: "100%",
+        margin: "0 auto",
+        padding: "1rem",
+        boxSizing: "border-box",
+      }}
+    >
+      <h2 style={{ textAlign: "center" }}>
+        {editingId ? "✏️ Editar Categoría" : "📂 Categorías"}
+      </h2>
 
-      {/* Formulario de Creación */}
-      <div
+      <form
+        onSubmit={handleSubmit}
         style={{
-          marginBottom: "2rem",
-          padding: "1rem",
-          border: "1px solid #444",
+          background: "#222",
+          padding: "1.5rem",
           borderRadius: "8px",
+          marginBottom: "2rem",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap", // CAMBIO 2: Esto permite que el botón baje en celulares
         }}
       >
-        <h3>Nueva Categoría</h3>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <form onSubmit={handleCreate} style={{ display: "flex", gap: "1rem" }}>
-          <input
-            type="text"
-            placeholder="Nombre de la categoría"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            style={{ flex: 1, padding: "0.5rem" }}
-          />
-          <button type="submit" style={{ padding: "0.5rem 1rem" }}>
-            Crear
+        <input
+          placeholder="Nombre de la categoría"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          style={{ flex: 1, minWidth: "200px", padding: "10px" }} // minWidth evita que se haga minúsculo
+        />
+        <button
+          type="submit"
+          style={{
+            padding: "10px 20px",
+            background: editingId ? "#f39c12" : "#27ae60",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          {editingId ? "Guardar" : "Crear"}
+        </button>
+        {editingId && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingId(null);
+              setName("");
+            }}
+            style={{
+              padding: "10px",
+              background: "#7f8c8d",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+            }}
+          >
+            Cancelar
           </button>
-        </form>
-      </div>
+        )}
+      </form>
 
-      {/* Lista de Categorías */}
-      <h3>Lista Existente</h3>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {categories.map((cat) => (
-          <li
-            key={cat.id}
+      <div style={{ display: "grid", gap: "1rem" }}>
+        {categories.map((c) => (
+          <div
+            key={c.id}
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "0.8rem",
-              borderBottom: "1px solid #333",
+              background: "#1a1a1a",
+              padding: "1rem",
+              borderRadius: "8px",
+              border: "1px solid #333",
+              flexWrap: "wrap", // CAMBIO 3: Para que los botones bajen si el nombre es muy largo
+              gap: "10px",
             }}
           >
-            <span>{cat.name}</span>
-            <button
-              onClick={() => handleDelete(cat.id)}
-              style={{
-                backgroundColor: "#d32f2f",
-                padding: "0.3rem 0.8rem",
-                fontSize: "0.8rem",
-              }}
-            >
-              Eliminar
-            </button>
-          </li>
+            <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+              {c.name}
+            </span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                onClick={() => handleEdit(c)}
+                style={{
+                  padding: "5px 10px",
+                  background: "#3498db",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDelete(c.id)}
+                style={{
+                  padding: "5px 10px",
+                  background: "#c0392b",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                Borrar
+              </button>
+            </div>
+          </div>
         ))}
-        {categories.length === 0 && <p>No hay categorías aún.</p>}
-      </ul>
+      </div>
     </div>
   );
 };
