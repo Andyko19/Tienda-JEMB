@@ -195,7 +195,7 @@ export const CartPage = () => {
             background: "#2a2a2a",
             padding: "1.5rem",
             borderRadius: "8px",
-            marginTop: "2rem",
+            marginTop: "1rem",
             border: "1px solid #444",
           }}
         >
@@ -213,7 +213,7 @@ export const CartPage = () => {
               placeholder="Nombre Completo"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              style={{ padding: "0.8rem", width: "100%" }}
+              style={{ padding: "0.5rem", width: "100%" }}
             />
             <div
               style={{
@@ -226,20 +226,20 @@ export const CartPage = () => {
                 placeholder="Celular"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                style={{ padding: "0.8rem", width: "100%" }}
+                style={{ padding: "0.25rem", width: "100%" }}
               />
               <input
                 placeholder="Ciudad"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                style={{ padding: "0.8rem", width: "100%" }}
+                style={{ padding: "0.25rem", width: "100%" }}
               />
             </div>
             <textarea
               placeholder="Dirección exacta (Calle, número, referencia)"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              style={{ padding: "0.8rem", width: "100%", height: "80px" }}
+              style={{ padding: "0.5rem", width: "100%", height: "80px" }}
             />
           </div>
         </div>

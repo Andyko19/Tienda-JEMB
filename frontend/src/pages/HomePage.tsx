@@ -4,7 +4,6 @@ import { productService } from "../services/product.service";
 import { categoryService } from "../services/category.service";
 import type { Category } from "../services/category.service";
 import { useCart } from "../context/CartContext";
-// Ya no necesitamos react-player
 
 export const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,7 +16,7 @@ export const HomePage = () => {
 
   const { addToCart } = useCart();
 
-  // URL base para las imágenes
+  // URL base para las imágenes locales
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
   const BASE_URL = API_URL.replace("/api", "");
 
@@ -59,16 +58,15 @@ export const HomePage = () => {
     handleSearch();
   }, [searchTerm, selectedCategory]);
 
-  // --- COMPONENTE AUXILIAR PARA VIDEO (NATIVO) ---
+  // --- COMPONENTE AUXILIAR PARA VIDEO E IMAGEN ---
   const renderMedia = (product: Product) => {
-    // 1. Si hay VIDEO
+    // 1. Si hay VIDEO, tiene prioridad sobre la foto
     if (product.video) {
       // A) Es YouTube?
       if (
         product.video.includes("youtube.com") ||
         product.video.includes("youtu.be")
       ) {
-        // Lógica para sacar el ID del video
         let videoId = "";
         try {
           if (product.video.includes("v=")) {
@@ -106,13 +104,23 @@ export const HomePage = () => {
       );
     }
 
-    // 2. Si NO hay video, mostrar FOTO
+    // 2. Si NO hay video, mostrar FOTO (Inteligente)
     if (product.image) {
+      // ¿Es un link externo (http)? Lo usamos directo.
+      // ¿Es un archivo local? Le ponemos el prefijo BASE_URL.
+      const imageSrc = product.image.startsWith("http")
+        ? product.image
+        : `${BASE_URL}/${product.image.replace(/\\/g, "/")}`;
+
       return (
         <img
-          src={`${BASE_URL}/${product.image.replace(/\\/g, "/")}`}
+          src={imageSrc}
           alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={(e) => {
+            // Si la imagen falla, la ocultamos suavemente
+            e.currentTarget.style.display = "none";
+          }}
         />
       );
     }
@@ -271,7 +279,6 @@ export const HomePage = () => {
                     border: "1px solid #444",
                   }}
                 >
-                  {/* LLAMAMOS A LA FUNCIÓN QUE ELIGE QUÉ MOSTRAR */}
                   {renderMedia(product)}
                 </div>
 

@@ -1,93 +1,78 @@
-import type { Response } from "express";
-import type { Request } from "express";
+import { Request, Response } from "express";
 import Product from "../database/models/product.model.js";
-import Category from "../database/models/category.model.js";
-import { Op } from "sequelize";
+import { v4 as uuidv4 } from "uuid";
 
-// 1. Crear producto
-export const createProduct = async (req: any, res: Response) => {
-  // CAMBIO AQUÍ: Usamos 'filename' y agregamos 'uploads/' manualmente
-  // Esto guarda "uploads/foto123.jpg" en la BD en lugar de "C:\Users\...\uploads\foto123.jpg"
-  const imagePath = req.file ? `uploads/${req.file.filename}` : null;
+// 1. Obtener todos los productos (con filtros opcionales)
+export const getAllProducts = async (req: Request, res: Response) => {
+  try {
+    const { name, categoryId } = req.query;
+    const whereClause: any = {};
 
-  const { name, description, price, stock, categoryId, video } = req.body;
+    if (name) {
+      whereClause.name = name;
+    }
+    if (categoryId) {
+      whereClause.categoryId = categoryId;
+    }
 
-  if (!name || !description || !price || !stock || !categoryId) {
-    return res
-      .status(400)
-      .json({ message: "Todos los campos son requeridos." });
+    const products = await Product.findAll({ where: whereClause });
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener productos" });
   }
+};
+
+// 2. Obtener un producto por ID
+export const getProductById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const product = await Product.findByPk(id);
+    if (!product) {
+      return res.status(404).json({ message: "Producto no encontrado" });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener producto" });
+  }
+};
+
+// 3. Crear producto (Soporta Archivo o Link)
+export const createProduct = async (req: any, res: Response) => {
+  // Extraemos 'image' del body por si viene como URL (texto)
+  const { name, description, price, stock, categoryId, video, image } =
+    req.body;
 
   try {
+    // LÓGICA HÍBRIDA:
+    // Prioridad 1: Si subieron archivo (req.file), usamos la ruta local 'uploads/...'.
+    // Prioridad 2: Si no hay archivo, usamos el texto que venga en 'image' (el link).
+    // Prioridad 3: Si no hay nada, string vacío.
+    const imagePath = req.file ? `uploads/${req.file.filename}` : image || "";
+
     const newProduct = await Product.create({
+      id: uuidv4(),
       name,
       description,
       price: parseFloat(price),
       stock: parseInt(stock),
       categoryId,
-      video,
-      image: imagePath, // Ahora sí es una ruta web válida
+      image: imagePath, // Aquí se guarda "uploads/foto.jpg" O "https://google.com/foto.jpg"
+      video: video || null,
     });
+
     res.status(201).json(newProduct);
   } catch (error) {
-    console.error("Error al crear producto:", error);
-    res.status(500).json({ message: "Error al crear producto." });
+    console.error(error);
+    res.status(500).json({ message: "Error al crear producto" });
   }
 };
 
-// 2. Obtener productos (con filtros opcionales)
-export const getAllProducts = async (req: Request, res: Response) => {
-  try {
-    // Extraemos los filtros de la URL (ej: ?name=zapato&categoryId=123)
-    const { name, categoryId } = req.query;
-
-    // Creamos un objeto de condiciones vacío
-    const whereClause: any = {};
-
-    // Si el usuario escribió un nombre, buscamos coincidencias (case-insensitive)
-    if (name) {
-      whereClause.name = { [Op.iLike]: `%${name}%` };
-      // Nota: Si usas MySQL en vez de Postgres, cambia Op.iLike por Op.like
-    }
-
-    // Si el usuario seleccionó una categoría, filtramos por ID
-    if (categoryId) {
-      whereClause.categoryId = categoryId;
-    }
-
-    const products = await Product.findAll({
-      where: whereClause, // <--- Aplicamos el filtro aquí
-      include: [{ model: Category, attributes: ["name"] }],
-    });
-
-    res.status(200).json(products);
-  } catch (error) {
-    console.error(error); // Es bueno ver el error en consola
-    res.status(500).json({ message: "Error al obtener productos." });
-  }
-};
-
-// 3. Obtener uno por ID
-export const getProductById = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const product = await Product.findByPk(id, {
-      include: [{ model: Category, attributes: ["name"] }],
-    });
-    if (!product) {
-      return res.status(404).json({ message: "Producto no encontrado." });
-    }
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener el producto." });
-  }
-};
-
-// 4. Actualizar producto
+// 4. Actualizar producto (Soporta Archivo o Link)
 export const updateProduct = async (req: any, res: Response) => {
   const { id } = req.params;
-  // Ahora recibimos 'video' y los demás datos del FormData
-  const { name, description, price, stock, categoryId, video } = req.body;
+  // Recibimos 'image' (texto) y 'video' del body
+  const { name, description, price, stock, categoryId, video, image } =
+    req.body;
 
   try {
     const product = await Product.findByPk(id);
@@ -95,22 +80,25 @@ export const updateProduct = async (req: any, res: Response) => {
       return res.status(404).json({ message: "Producto no encontrado." });
     }
 
-    // Lógica inteligente para la imagen:
-    // Si subieron una nueva (req.file existe), usamos esa ruta.
-    // Si NO subieron nueva, mantenemos la que ya tenía (product.image).
-    const imagePath = req.file
-      ? `uploads/${req.file.filename}`
-      : product.dataValues.image;
+    // Lógica para decidir qué imagen guardar
+    let finalImage = product.dataValues.image; // Por defecto mantenemos la vieja
 
-    // Actualizamos los campos
+    if (req.file) {
+      // Caso A: Subieron archivo nuevo -> Reemplazamos por la ruta del archivo
+      finalImage = `uploads/${req.file.filename}`;
+    } else if (image && image.trim() !== "") {
+      // Caso B: No subieron archivo, pero enviaron un LINK de texto nuevo -> Usamos el link
+      finalImage = image;
+    }
+
     await product.update({
       name,
       description,
       price: parseFloat(price),
       stock: parseInt(stock),
       categoryId,
-      image: imagePath,
-      video: video || null, // Si envían vacío, guardamos null
+      image: finalImage,
+      video: video || null,
     });
 
     res.status(200).json(product);
@@ -120,16 +108,17 @@ export const updateProduct = async (req: any, res: Response) => {
   }
 };
 
-// 5. Eliminar producto
+// 5. Borrar producto
 export const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const deletedRows = await Product.destroy({ where: { id } });
-    if (deletedRows === 0) {
-      return res.status(404).json({ message: "Producto no encontrado." });
+    const product = await Product.findByPk(id);
+    if (!product) {
+      return res.status(404).json({ message: "Producto no encontrado" });
     }
-    res.status(200).json({ message: "Producto eliminado correctamente." });
+    await product.destroy();
+    res.json({ message: "Producto eliminado correctamente" });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar producto." });
+    res.status(500).json({ message: "Error al eliminar producto" });
   }
 };
