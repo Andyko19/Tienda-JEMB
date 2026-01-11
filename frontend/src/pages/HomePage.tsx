@@ -9,14 +9,10 @@ export const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estados para los filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-
   const { addToCart } = useCart();
 
-  // URL base para las imágenes locales
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
   const BASE_URL = API_URL.replace("/api", "");
 
@@ -26,14 +22,14 @@ export const HomePage = () => {
 
   const loadInitialData = async () => {
     try {
-      const [productsData, categoriesData] = await Promise.all([
+      const [prods, cats] = await Promise.all([
         productService.getAll(),
         categoryService.getAll(),
       ]);
-      setProducts(productsData);
-      setCategories(categoriesData);
+      setProducts(prods);
+      setCategories(cats);
     } catch (error) {
-      console.error("Error cargando datos:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -48,7 +44,7 @@ export const HomePage = () => {
       });
       setProducts(data);
     } catch (error) {
-      console.error("Error filtrando:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -58,26 +54,20 @@ export const HomePage = () => {
     handleSearch();
   }, [searchTerm, selectedCategory]);
 
-  // --- COMPONENTE AUXILIAR PARA VIDEO E IMAGEN ---
+  // --- 🧠 CEREBRO TRADUCTOR DE VIDEOS MEJORADO 🧠 ---
   const renderMedia = (product: Product) => {
-    // 1. Si hay VIDEO, tiene prioridad sobre la foto
-    if (product.video) {
-      // A) Es YouTube?
-      if (
-        product.video.includes("youtube.com") ||
-        product.video.includes("youtu.be")
-      ) {
+    const videoUrl = product.video;
+
+    if (videoUrl) {
+      // 1. YOUTUBE (Funciona perfecto)
+      if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
         let videoId = "";
         try {
-          if (product.video.includes("v=")) {
-            videoId = product.video.split("v=")[1].split("&")[0];
-          } else if (product.video.includes("youtu.be")) {
-            videoId = product.video.split("/").pop() || "";
-          }
-        } catch (e) {
-          console.error("Error parseando URL de youtube", e);
-        }
-
+          if (videoUrl.includes("v="))
+            videoId = videoUrl.split("v=")[1].split("&")[0];
+          else if (videoUrl.includes("youtu.be"))
+            videoId = videoUrl.split("/").pop() || "";
+        } catch (e) {}
         return (
           <iframe
             width="100%"
@@ -85,18 +75,126 @@ export const HomePage = () => {
             src={`https://www.youtube.com/embed/${videoId}`}
             title={product.name}
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             style={{ borderRadius: "4px" }}
           ></iframe>
         );
       }
 
-      // B) Es un archivo directo (.mp4, etc)
+      // 2. FACEBOOK (Corrección de Link)
+      if (videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch")) {
+        // Truco: Aseguramos que sea un link web y no móvil
+        let cleanFbUrl = videoUrl.replace("m.facebook.com", "www.facebook.com");
+        const encodedUrl = encodeURIComponent(cleanFbUrl);
+
+        return (
+          <div style={{ width: "100%", height: "100%", position: "relative" }}>
+            <iframe
+              src={`https://www.facebook.com/plugins/video.php?href=${encodedUrl}&show_text=false&t=0`}
+              width="100%"
+              height="100%"
+              style={{
+                border: "none",
+                overflow: "hidden",
+                borderRadius: "4px",
+                background: "black",
+              }}
+              scrolling="no"
+              frameBorder="0"
+              allowFullScreen={true}
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            ></iframe>
+            {/* Aviso por si falla la privacidad */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                fontSize: "9px",
+                color: "#666",
+                textAlign: "center",
+                background: "rgba(0,0,0,0.7)",
+                padding: "2px",
+              }}
+            >
+              Si no carga, el video es Privado o +18
+            </div>
+          </div>
+        );
+      }
+
+      // 3. TIKTOK (Corrección de Extracción)
+      if (videoUrl.includes("tiktok.com")) {
+        try {
+          // Intentamos extraer ID aunque haya signos de interrogación ?
+          // Ejemplo: .../video/746839284738?params...
+          const match = videoUrl.match(/video\/(\d+)/);
+          const tiktokId = match ? match[1] : null;
+
+          if (tiktokId) {
+            return (
+              <iframe
+                src={`https://www.tiktok.com/embed/v2/${tiktokId}?lang=es-ES`}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowFullScreen
+                style={{ borderRadius: "4px", background: "#000" }}
+              ></iframe>
+            );
+          } else {
+            // Si no encontramos ID (es link corto vm.tiktok...), mostramos aviso
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  flexDirection: "column",
+                  color: "#ccc",
+                  textAlign: "center",
+                  padding: "10px",
+                }}
+              >
+                <p style={{ margin: 0, fontSize: "2rem" }}>⚠️</p>
+                <p style={{ fontSize: "0.8rem" }}>Enlace corto no soportado.</p>
+                <p style={{ fontSize: "0.7rem", color: "#888" }}>
+                  Usa el link largo del navegador o sube el archivo.
+                </p>
+              </div>
+            );
+          }
+        } catch (e) {
+          console.error("Error TikTok", e);
+        }
+      }
+
+      // 4. INSTAGRAM (Añade /embed)
+      if (videoUrl.includes("instagram.com")) {
+        const cleanUrl = videoUrl.split("?")[0].replace(/\/$/, "");
+        return (
+          <iframe
+            src={`${cleanUrl}/embed`}
+            width="100%"
+            height="100%"
+            frameBorder="0"
+            scrolling="no"
+            style={{ borderRadius: "4px" }}
+          ></iframe>
+        );
+      }
+
+      // 5. ARCHIVO MP4
+      const videoSrc = videoUrl.startsWith("http")
+        ? videoUrl
+        : `${BASE_URL}/${videoUrl.replace(/\\/g, "/")}`;
       return (
         <video
-          src={product.video}
+          src={videoSrc}
           controls
+          playsInline
           width="100%"
           height="100%"
           style={{ backgroundColor: "#000", borderRadius: "4px" }}
@@ -104,28 +202,23 @@ export const HomePage = () => {
       );
     }
 
-    // 2. Si NO hay video, mostrar FOTO (Inteligente)
+    // FOTO
     if (product.image) {
-      // ¿Es un link externo (http)? Lo usamos directo.
-      // ¿Es un archivo local? Le ponemos el prefijo BASE_URL.
       const imageSrc = product.image.startsWith("http")
         ? product.image
         : `${BASE_URL}/${product.image.replace(/\\/g, "/")}`;
-
       return (
         <img
           src={imageSrc}
           alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           onError={(e) => {
-            // Si la imagen falla, la ocultamos suavemente
             e.currentTarget.style.display = "none";
           }}
         />
       );
     }
 
-    // 3. Nada
     return <span style={{ color: "#aaa" }}>Sin Imagen</span>;
   };
 
@@ -145,17 +238,9 @@ export const HomePage = () => {
         margin: "0 auto",
       }}
     >
-      <h1
-        style={{
-          textAlign: "center",
-          marginBottom: "2rem",
-          fontSize: "2.5rem",
-        }}
-      >
-        Nuestros Productos
-      </h1>
+      <h1 style={{ marginBottom: "2rem" }}>Nuestros Productos</h1>
 
-      {/* --- FILTROS --- */}
+      {/* Filtros */}
       <div
         style={{
           display: "flex",
@@ -167,16 +252,16 @@ export const HomePage = () => {
       >
         <input
           type="text"
-          placeholder="🔍 Buscar producto..."
+          placeholder="🔍 Buscar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             padding: "0.8rem",
             width: "300px",
             borderRadius: "4px",
-            border: "1px solid #444",
             background: "#2a2a2a",
             color: "white",
+            border: "1px solid #444",
           }}
         />
         <select
@@ -185,9 +270,9 @@ export const HomePage = () => {
           style={{
             padding: "0.8rem",
             borderRadius: "4px",
-            border: "1px solid #444",
             background: "#2a2a2a",
             color: "white",
+            border: "1px solid #444",
           }}
         >
           <option value="">Todas las Categorías</option>
@@ -217,11 +302,11 @@ export const HomePage = () => {
         )}
       </div>
 
-      {/* --- GRID DE PRODUCTOS --- */}
+      {/* Grid */}
       {loading ? (
         <div>Buscando...</div>
       ) : products.length === 0 ? (
-        <p style={{ color: "#aaa" }}>No hay productos.</p>
+        <p>No hay productos.</p>
       ) : (
         <div
           style={{
@@ -232,7 +317,6 @@ export const HomePage = () => {
         >
           {products.map((product) => {
             const hasStock = product.stock > 0;
-
             return (
               <div
                 key={product.id}
@@ -247,7 +331,6 @@ export const HomePage = () => {
                   opacity: hasStock ? 1 : 0.7,
                 }}
               >
-                {/* ETIQUETA STOCK */}
                 <div
                   style={{
                     position: "absolute",
@@ -265,10 +348,10 @@ export const HomePage = () => {
                   {hasStock ? `Stock: ${product.stock}` : "AGOTADO"}
                 </div>
 
-                {/* --- ZONA MULTIMEDIA (VIDEO O FOTO) --- */}
+                {/* ZONA MULTIMEDIA */}
                 <div
                   style={{
-                    height: "200px",
+                    height: "350px",
                     marginBottom: "1rem",
                     borderRadius: "4px",
                     overflow: "hidden",
@@ -293,7 +376,6 @@ export const HomePage = () => {
                 >
                   {product.description}
                 </p>
-
                 <div
                   style={{
                     display: "flex",
@@ -314,7 +396,7 @@ export const HomePage = () => {
                   <button
                     onClick={() => {
                       addToCart(product);
-                      alert("Agregado al carrito 🛒");
+                      alert("Agregado 🛒");
                     }}
                     disabled={!hasStock}
                     style={{

@@ -4,7 +4,7 @@ import { productService } from "../../services/product.service";
 import type { Category } from "../../services/category.service";
 import { categoryService } from "../../services/category.service";
 
-// Configuración de URL para previsualizar imágenes
+// URL base para previsualizar imágenes/videos locales
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const BASE_URL = API_URL.replace("/api", "");
 
@@ -19,12 +19,13 @@ export const ProductsPage = () => {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [video, setVideo] = useState("");
 
-  // --- NUEVA LÓGICA DE IMAGEN ---
-  const [imageUrl, setImageUrl] = useState(""); // Para links externos
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Para subidas locales
-  // ------------------------------
+  // --- ARCHIVOS MULTIMEDIA ---
+  const [imageUrl, setImageUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [videoUrl, setVideoUrl] = useState("");
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadData();
@@ -39,8 +40,8 @@ export const ProductsPage = () => {
       setProducts(prods);
       setCategories(cats);
       if (cats.length > 0 && !categoryId) setCategoryId(cats[0].id);
-    } catch (error) {
-      console.error("Error cargando datos", error);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -51,16 +52,19 @@ export const ProductsPage = () => {
     setPrice(product.price.toString());
     setStock(product.stock.toString());
     setCategoryId(product.categoryId);
-    setVideo(product.video || "");
 
-    // Lógica inteligente: ¿Es link o archivo?
-    if (product.image && product.image.startsWith("http")) {
-      setImageUrl(product.image); // Si es link, llenamos el campo de texto
-    } else {
-      setImageUrl(""); // Si es archivo local, dejamos limpio
-    }
-
+    // Cargar Imagen
+    if (product.image && product.image.startsWith("http"))
+      setImageUrl(product.image);
+    else setImageUrl("");
     setSelectedFile(null);
+
+    // Cargar Video
+    if (product.video && product.video.startsWith("http"))
+      setVideoUrl(product.video);
+    else setVideoUrl("");
+    setSelectedVideoFile(null);
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -73,50 +77,48 @@ export const ProductsPage = () => {
       formData.append("price", price);
       formData.append("stock", stock);
       formData.append("categoryId", categoryId);
-      formData.append("video", video);
 
-      // DECISIÓN DE IMAGEN A ENVIAR:
-      if (selectedFile) {
-        // Opción A: Usuario eligió un archivo del PC -> Enviamos archivo binario
-        formData.append("image", selectedFile);
-      } else if (imageUrl) {
-        // Opción B: Usuario pegó un link -> Enviamos el texto del link
-        formData.append("image", imageUrl);
-      }
+      // IMAGEN
+      if (selectedFile) formData.append("image", selectedFile);
+      else if (imageUrl) formData.append("image", imageUrl);
+
+      // VIDEO
+      if (selectedVideoFile) formData.append("video", selectedVideoFile);
+      else if (videoUrl) formData.append("video", videoUrl);
 
       if (editingId) {
         await productService.update(editingId, formData);
-        alert("Actualizado ✅");
+        alert("¡Producto actualizado! ✅");
       } else {
         await productService.create(formData);
-        alert("Creado ✅");
+        alert("¡Producto creado! ✅");
       }
 
-      // Limpiar formulario completo
+      // Reset
       setEditingId(null);
       setName("");
       setDescription("");
       setPrice("");
       setStock("");
-      setVideo("");
       setImageUrl("");
       setSelectedFile(null);
+      setVideoUrl("");
+      setSelectedVideoFile(null);
 
-      // Truco para limpiar el input type="file" visualmente
-      const fileInput = document.getElementById(
-        "fileInput"
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
+      const fInput = document.getElementById("fileInput") as HTMLInputElement;
+      const vInput = document.getElementById("videoInput") as HTMLInputElement;
+      if (fInput) fInput.value = "";
+      if (vInput) vInput.value = "";
 
       loadData();
     } catch (error) {
       console.error(error);
-      alert("Error al guardar");
+      alert("Error al guardar. Si es un video pesado, espera un poco más.");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Borrar?")) {
+    if (confirm("¿Borrar producto?")) {
       await productService.delete(id);
       loadData();
     }
@@ -124,7 +126,7 @@ export const ProductsPage = () => {
 
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
-      <h2>{editingId ? "✏️ Editar Producto" : "➕ Nuevo Producto"}</h2>
+      <h2>{editingId ? "✏️ Editar Producto" : "➕ Crear Nuevo Producto"}</h2>
 
       <form
         onSubmit={handleSubmit}
@@ -142,13 +144,13 @@ export const ProductsPage = () => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          style={{ padding: "8px" }}
+          style={{ padding: "10px" }}
         />
         <textarea
           placeholder="Descripción"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{ padding: "8px" }}
+          style={{ padding: "10px", minHeight: "80px" }}
         />
 
         <div style={{ display: "flex", gap: "1rem" }}>
@@ -158,7 +160,7 @@ export const ProductsPage = () => {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             required
-            style={{ flex: 1, padding: "8px" }}
+            style={{ flex: 1, padding: "10px" }}
           />
           <input
             type="number"
@@ -166,26 +168,14 @@ export const ProductsPage = () => {
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             required
-            style={{ flex: 1, padding: "8px" }}
+            style={{ flex: 1, padding: "10px" }}
           />
         </div>
-
-        <input
-          placeholder="Link de Video (Opcional)"
-          value={video}
-          onChange={(e) => setVideo(e.target.value)}
-          style={{
-            padding: "8px",
-            background: "#333",
-            color: "white",
-            border: "1px solid #555",
-          }}
-        />
 
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          style={{ padding: "8px" }}
+          style={{ padding: "10px" }}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -194,7 +184,7 @@ export const ProductsPage = () => {
           ))}
         </select>
 
-        {/* --- SECCIÓN DE IMAGEN DOBLE --- */}
+        {/* SECCIÓN VIDEO */}
         <div
           style={{
             border: "1px dashed #666",
@@ -203,72 +193,88 @@ export const ProductsPage = () => {
             background: "#2a2a2a",
           }}
         >
-          <p
-            style={{
-              marginTop: 0,
-              color: "#ccc",
-              fontSize: "0.9rem",
-              fontWeight: "bold",
-            }}
-          >
-            Imagen del Producto (Elige una opción):
+          <p style={{ marginTop: 0, color: "#4caf50", fontWeight: "bold" }}>
+            🎥 Video:
           </p>
 
-          {/* Opción A: Link */}
-          <label
-            style={{
-              display: "block",
-              marginBottom: "5px",
-              fontSize: "0.8rem",
-              color: "#aaa",
-            }}
-          >
-            Opción 1: Pegar enlace de internet
-          </label>
           <input
-            placeholder="https://ejemplo.com/imagen.jpg"
-            value={imageUrl}
+            placeholder="Link (YouTube, Facebook) o déjalo vacío"
+            value={videoUrl}
             onChange={(e) => {
-              setImageUrl(e.target.value);
-              setSelectedFile(null); // Si escribe link, anulamos el archivo
-              const fileInput = document.getElementById(
-                "fileInput"
-              ) as HTMLInputElement;
-              if (fileInput) fileInput.value = "";
+              setVideoUrl(e.target.value);
+              setSelectedVideoFile(null);
             }}
             style={{
               width: "100%",
               padding: "8px",
               marginBottom: "10px",
-              boxSizing: "border-box",
               background: "#444",
               color: "white",
               border: "1px solid #555",
             }}
           />
-
           <div
             style={{
               textAlign: "center",
-              margin: "10px 0",
               color: "#888",
               fontSize: "0.8rem",
-            }}
-          >
-            - O -
-          </div>
-
-          {/* Opción B: Archivo */}
-          <label
-            style={{
-              display: "block",
               marginBottom: "5px",
-              fontSize: "0.8rem",
-              color: "#aaa",
             }}
           >
-            Opción 2: Subir archivo desde tu PC
-          </label>
+            - O SUBIR ARCHIVO MP4 (Recomendado para TikTok) -
+          </div>
+          <input
+            id="videoInput"
+            type="file"
+            accept="video/*"
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                setSelectedVideoFile(e.target.files[0]);
+                setVideoUrl("");
+              }
+            }}
+            style={{ color: "white" }}
+          />
+        </div>
+
+        {/* SECCIÓN IMAGEN */}
+        <div
+          style={{
+            border: "1px dashed #666",
+            padding: "15px",
+            borderRadius: "4px",
+            background: "#2a2a2a",
+          }}
+        >
+          <p style={{ marginTop: 0, color: "#f39c12", fontWeight: "bold" }}>
+            🖼️ Imagen:
+          </p>
+          <input
+            placeholder="Link de imagen (http...)"
+            value={imageUrl}
+            onChange={(e) => {
+              setImageUrl(e.target.value);
+              setSelectedFile(null);
+            }}
+            style={{
+              width: "100%",
+              padding: "8px",
+              marginBottom: "10px",
+              background: "#444",
+              color: "white",
+              border: "1px solid #555",
+            }}
+          />
+          <div
+            style={{
+              textAlign: "center",
+              color: "#888",
+              fontSize: "0.8rem",
+              marginBottom: "5px",
+            }}
+          >
+            - O SUBIR FOTO -
+          </div>
           <input
             id="fileInput"
             type="file"
@@ -276,12 +282,12 @@ export const ProductsPage = () => {
             onChange={(e) => {
               if (e.target.files?.[0]) {
                 setSelectedFile(e.target.files[0]);
-                setImageUrl(""); // Si sube archivo, borramos el link
+                setImageUrl("");
               }
             }}
+            style={{ color: "white" }}
           />
         </div>
-        {/* ------------------------------- */}
 
         <div style={{ display: "flex", gap: "10px" }}>
           <button
@@ -297,28 +303,13 @@ export const ProductsPage = () => {
               fontWeight: "bold",
             }}
           >
-            {editingId ? "Guardar Cambios" : "Crear Producto"}
+            {editingId ? "Guardar" : "Crear"}
           </button>
           {editingId && (
             <button
               type="button"
-              onClick={() => {
-                setEditingId(null);
-                setName("");
-                setImageUrl("");
-                setDescription("");
-                setPrice("");
-                setStock("");
-                setVideo("");
-              }}
-              style={{
-                padding: "12px",
-                background: "#7f8c8d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
+              onClick={() => setEditingId(null)}
+              style={{ padding: "12px" }}
             >
               Cancelar
             </button>
@@ -326,7 +317,7 @@ export const ProductsPage = () => {
         </div>
       </form>
 
-      {/* LISTA CON PREVISUALIZACIÓN */}
+      {/* LISTA DE PRODUCTOS (Ahora con FOTO y VIDEO mini) */}
       <div
         style={{
           display: "grid",
@@ -344,12 +335,12 @@ export const ProductsPage = () => {
               background: "#1a1a1a",
             }}
           >
-            {/* Visualizador Inteligente para Admin */}
+            {/* MINIATURA FOTO */}
             <div
               style={{
-                height: "140px",
+                height: "100px",
                 background: "#000",
-                marginBottom: "10px",
+                marginBottom: "5px",
                 borderRadius: "4px",
                 overflow: "hidden",
                 display: "flex",
@@ -366,33 +357,40 @@ export const ProductsPage = () => {
                   }
                   alt={p.name}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onError={(e) => (e.currentTarget.style.display = "none")} // Ocultar si falla
                 />
               ) : (
-                <span style={{ color: "#666", fontSize: "0.8rem" }}>
+                <span style={{ color: "#555", fontSize: "0.8rem" }}>
                   Sin Foto
                 </span>
               )}
             </div>
 
-            <h4 style={{ margin: "0 0 5px 0", fontSize: "1.1rem" }}>
-              {p.name}
-            </h4>
-            <p style={{ margin: "0 0 10px 0", color: "#aaa" }}>
-              Stock: {p.stock}
-            </p>
+            {/* INDICADOR VIDEO */}
+            {p.video && (
+              <div
+                style={{
+                  background: "#e74c3c",
+                  color: "white",
+                  fontSize: "0.7rem",
+                  padding: "2px",
+                  textAlign: "center",
+                  borderRadius: "2px",
+                  marginBottom: "5px",
+                }}
+              >
+                🎥 TIENE VIDEO
+              </div>
+            )}
 
-            <div style={{ display: "flex", gap: "8px" }}>
+            <h4 style={{ margin: "0 0 5px 0" }}>{p.name}</h4>
+            <div style={{ display: "flex", gap: "5px" }}>
               <button
                 onClick={() => handleEdit(p)}
                 style={{
                   flex: 1,
                   background: "#3498db",
-                  border: "none",
                   color: "white",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
+                  padding: "5px",
                 }}
               >
                 Editar
@@ -402,11 +400,8 @@ export const ProductsPage = () => {
                 style={{
                   flex: 1,
                   background: "#c0392b",
-                  border: "none",
                   color: "white",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
+                  padding: "5px",
                 }}
               >
                 Borrar

@@ -1,53 +1,65 @@
 import { Request, Response } from "express";
 import Product from "../database/models/product.model.js";
 import { v4 as uuidv4 } from "uuid";
+import Category from "../database/models/category.model.js";
+import { Op } from "sequelize";
 
-// 1. Obtener todos los productos (con filtros opcionales)
+// 1. Obtener todos
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
     const { name, categoryId } = req.query;
     const whereClause: any = {};
 
     if (name) {
-      whereClause.name = name;
+      whereClause.name = { [Op.like]: `%${name}%` }; // O Op.iLike si usas Postgres
     }
     if (categoryId) {
       whereClause.categoryId = categoryId;
     }
 
-    const products = await Product.findAll({ where: whereClause });
+    const products = await Product.findAll({
+      where: whereClause,
+      include: [{ model: Category, attributes: ["name"] }],
+    });
     res.json(products);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error al obtener productos" });
   }
 };
 
-// 2. Obtener un producto por ID
+// 2. Obtener por ID
 export const getProductById = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const product = await Product.findByPk(id);
-    if (!product) {
-      return res.status(404).json({ message: "Producto no encontrado" });
-    }
+    const product = await Product.findByPk(id, {
+      include: [{ model: Category, attributes: ["name"] }],
+    });
+    if (!product) return res.status(404).json({ message: "No encontrado" });
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener producto" });
   }
 };
 
-// 3. Crear producto (Soporta Archivo o Link)
+// 3. Crear Producto
 export const createProduct = async (req: any, res: Response) => {
-  // Extraemos 'image' del body por si viene como URL (texto)
+  // Nota: req.files viene de Multer. Usamos 'any' en req para evitar errores de TS si faltan tipos.
   const { name, description, price, stock, categoryId, video, image } =
     req.body;
+  const files =
+    (req.files as { [fieldname: string]: Express.Multer.File[] }) || {};
 
   try {
-    // LÓGICA HÍBRIDA:
-    // Prioridad 1: Si subieron archivo (req.file), usamos la ruta local 'uploads/...'.
-    // Prioridad 2: Si no hay archivo, usamos el texto que venga en 'image' (el link).
-    // Prioridad 3: Si no hay nada, string vacío.
-    const imagePath = req.file ? `uploads/${req.file.filename}` : image || "";
+    // IMAGEN: ¿Viene archivo o link?
+    const imageFile = files["image"]?.[0];
+    const imagePath = imageFile ? `uploads/${imageFile.filename}` : image || "";
+
+    // VIDEO: ¿Viene archivo o link?
+    const videoFile = files["video"]?.[0];
+    const videoPath = videoFile
+      ? `uploads/${videoFile.filename}`
+      : video || null;
 
     const newProduct = await Product.create({
       id: uuidv4(),
@@ -56,39 +68,45 @@ export const createProduct = async (req: any, res: Response) => {
       price: parseFloat(price),
       stock: parseInt(stock),
       categoryId,
-      image: imagePath, // Aquí se guarda "uploads/foto.jpg" O "https://google.com/foto.jpg"
-      video: video || null,
+      image: imagePath,
+      video: videoPath,
     });
 
     res.status(201).json(newProduct);
   } catch (error) {
-    console.error(error);
+    console.error("Error creando producto:", error);
     res.status(500).json({ message: "Error al crear producto" });
   }
 };
 
-// 4. Actualizar producto (Soporta Archivo o Link)
+// 4. Actualizar Producto
 export const updateProduct = async (req: any, res: Response) => {
   const { id } = req.params;
-  // Recibimos 'image' (texto) y 'video' del body
   const { name, description, price, stock, categoryId, video, image } =
     req.body;
+  const files =
+    (req.files as { [fieldname: string]: Express.Multer.File[] }) || {};
 
   try {
     const product = await Product.findByPk(id);
-    if (!product) {
-      return res.status(404).json({ message: "Producto no encontrado." });
+    if (!product) return res.status(404).json({ message: "No encontrado." });
+
+    // Actualizar Imagen
+    let finalImage = product.dataValues.image;
+    if (files["image"]?.[0]) {
+      finalImage = `uploads/${files["image"][0].filename}`;
+    } else if (image !== undefined && image !== null) {
+      // Solo actualizamos si envían algo distinto de null/undefined
+      // Si envían string vacío, significa que quieren borrar la foto o poner un link vacío
+      if (image.trim() !== "") finalImage = image;
     }
 
-    // Lógica para decidir qué imagen guardar
-    let finalImage = product.dataValues.image; // Por defecto mantenemos la vieja
-
-    if (req.file) {
-      // Caso A: Subieron archivo nuevo -> Reemplazamos por la ruta del archivo
-      finalImage = `uploads/${req.file.filename}`;
-    } else if (image && image.trim() !== "") {
-      // Caso B: No subieron archivo, pero enviaron un LINK de texto nuevo -> Usamos el link
-      finalImage = image;
+    // Actualizar Video
+    let finalVideo = product.dataValues.video;
+    if (files["video"]?.[0]) {
+      finalVideo = `uploads/${files["video"][0].filename}`;
+    } else if (video !== undefined && video !== null) {
+      if (video.trim() !== "") finalVideo = video;
     }
 
     await product.update({
@@ -98,27 +116,25 @@ export const updateProduct = async (req: any, res: Response) => {
       stock: parseInt(stock),
       categoryId,
       image: finalImage,
-      video: video || null,
+      video: finalVideo,
     });
 
     res.status(200).json(product);
   } catch (error) {
-    console.error("Error al actualizar:", error);
-    res.status(500).json({ message: "Error al actualizar producto." });
+    console.error("Error actualizando:", error);
+    res.status(500).json({ message: "Error al actualizar" });
   }
 };
 
-// 5. Borrar producto
+// 5. Eliminar
 export const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const product = await Product.findByPk(id);
-    if (!product) {
-      return res.status(404).json({ message: "Producto no encontrado" });
-    }
+    if (!product) return res.status(404).json({ message: "No encontrado" });
     await product.destroy();
-    res.json({ message: "Producto eliminado correctamente" });
+    res.json({ message: "Eliminado" });
   } catch (error) {
-    res.status(500).json({ message: "Error al eliminar producto" });
+    res.status(500).json({ message: "Error al eliminar" });
   }
 };

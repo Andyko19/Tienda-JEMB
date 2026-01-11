@@ -2,35 +2,37 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Aseguramos que la carpeta exista antes de nada
+// 1. Aseguramos que la carpeta uploads exista
 const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
-  console.log("📂 Carpeta uploads no existía, creándola en:", uploadDir);
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// 2. Configuración de almacenamiento
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Usamos la ruta absoluta garantizada
-    console.log("📥 Multer recibiendo archivo, guardando en:", uploadDir);
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    const finalName = uniqueSuffix + ext;
-    console.log("📄 Nombre generado para el archivo:", finalName);
-    cb(null, finalName);
+    // Nombre único: TIMESTAMP.extensión
+    const uniqueSuffix = Date.now() + path.extname(file.originalname);
+    cb(null, uniqueSuffix);
   },
 });
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    console.warn("⚠️ Archivo rechazado: No es una imagen");
-    cb(new Error("Solo se permiten imágenes"), false);
-  }
-};
-
-export const upload = multer({ storage, fileFilter });
+// 3. Exportar el middleware configurado
+export const upload = multer({
+  storage,
+  limits: { fileSize: 150 * 1024 * 1024 }, // 150MB límite
+  fileFilter: (req, file, cb) => {
+    // Aceptar imágenes y videos
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/")
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Formato no soportado. Solo imágenes y videos."));
+    }
+  },
+});

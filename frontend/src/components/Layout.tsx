@@ -34,7 +34,7 @@ export const Layout = () => {
         <div className="container nav-content">
           {/* LOGO */}
           <Link to="/" className="nav-logo" onClick={closeMenu}>
-            🛍️ Bienvenido a Tienda JEMB
+            🛍️ Bienvenido a JEMB Store
           </Link>
 
           {/* BOTÓN HAMBURGUESA (Solo visible en Móvil gracias al CSS) */}
